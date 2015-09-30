@@ -1,0 +1,186 @@
+DECLARE FUNCTION CheckLever& ()
+
+
+
+'----------------------------------------------------------------------------
+'       Define user types
+'----------------------------------------------------------------------------
+TYPE TExperiment
+	DIM type AS STRING
+
+END TYPE
+
+TYPE TCycle
+	DIM duration AS INTEGER	'cycle duration in seconds
+	
+END TYPE
+
+TYPE TLever
+  n AS LONG             'number of the last response
+  t AS LONG             'time of the last response
+  nRew AS LONG          'number of the next rewarded response
+  tRew AS LONG          'min time of the next rewarded response
+  tPom AS LONG          '
+  status AS LONG
+  status0 AS LONG
+  sensitivity AS LONG   '(10msec)
+  address AS LONG
+  bit AS LONG
+END TYPE
+
+TYPE TFeeder
+  d AS LONG             'duration (10msec) of feeder activation
+  delay AS LONG         'activation delay (10msec)
+  t0 AS LONG            'time (10msec) of the last activation
+  status AS LONG        '0..no activated, -1 or 1..activated
+  address AS LONG
+  bit AS LONG
+END TYPE
+
+'----------------------------------------------------------------------------
+'       DECLARE VARIABLES
+'----------------------------------------------------------------------------
+time_since_start AS long
+DIM lever AS TLever
+DIM feeder AS TFeeder
+DIM experiment AS TExperiment
+
+'----------------------------------------------------------------------------
+'       BASIC INICIALIZATIONS
+'----------------------------------------------------------------------------
+
+'----------------------------------------------------------------------------
+'       Main loop
+'----------------------------------------------------------------------------
+FOR i_cycle = 1 TO num_cycles STEP-1
+	start_main_cycle:		'goto point
+	cycle AS TCycle			'initialises the cycle
+	'---
+	'inner cycle loop
+	'---
+	loop_start_time! = TIMER(.01) 	'SINGLE, should be enough
+
+	'---
+	'In the designated loop time
+	'---
+	WHILE loop_start_time! + cycle.duration >= GetTime
+	  IF loop_start_time! > TIMER THEN loop_start_time! = loop_start_time! - 86400	'takes care of experimenting over midnight
+		'---
+		'checks for lever press during the cycle if the experiment is evil
+		'---
+		IF experiment.type = "evil" THEN
+		
+		END IF
+		
+		'---
+		'
+		'---
+	  
+	  
+	WEND
+	
+	'---
+	'After the loop time ends
+	'---
+	WHILE after_loop_start_time! + cycle.duration >= GetTime
+	  IF loop_start_time! > TIMER THEN loop_start_time! = loop_start_time! - 86400	'takes care of experimenting over midnight
+		'---
+		'checks for lever press
+		'---
+		
+		
+		'---
+		'
+		'---
+	  
+	  
+	WEND
+		
+		
+		
+	end_main_cycle:		'goto point
+	
+NEXT i_cycle
+
+
+'----------------------------------------------------------------------------
+'       End
+'----------------------------------------------------------------------------
+
+
+'----------------------------------------------------------------------------
+'       FUNCTIONS
+'----------------------------------------------------------------------------
+FUNCTION GetTime
+	GetTime = TIMER(.01)
+END FUNCTION
+
+FUNCTION CheckLever
+  SHARED lever AS TLever, feeder AS TFeeder
+  SHARED t
+  
+  IF lever.address >= 0 THEN
+    u = INP(lever.address)
+    lever.status = INT((u MOD 2 ^ lever.bit) / 2 ^ (lever.bit - 1))
+  END IF
+
+  IF Lever.status0 <> Lever.status THEN
+    'lever was released or pressed including bouncing
+    lever.tPom = t
+  END IF
+
+  CheckLever = lever.status * 2
+
+  IF lever.tPom > 0 AND t - lever.tPom >= lever.sensitivity THEN
+    IF lever.status = 1 THEN 'lever released
+      lever.n = lever.n + 1: lever.t = t: lever.tPom = -1
+      CheckLever = 3
+    ELSE
+      lever.tPom = -1
+      CheckLever = 1
+    END IF
+  END IF
+
+  lever.status0 = lever.status
+
+  IF lever.nRew >= 0 AND lever.n >= lever.nRew THEN
+    lever.nRew = -1: lever.tRew = -1
+    ActivateFeeder
+  ELSEIF lever.tRew >= 0 AND lever.t >= lever.tRew THEN
+    lever.nRew = -1: lever.tRew = -1
+    ActivateFeeder
+  END IF
+
+END FUNCTION
+
+FUNCTION CheckFeeder
+  SHARED feeder AS TFeeder, Cs() AS TCycle
+  SHARED t
+
+  CheckFeeder = feeder.status * 2
+  IF feeder.status <= 0 THEN
+    IF t >= feeder.t0 AND t - feeder.t0 <= feeder.d THEN
+      Feeder.status = 1
+      IF feeder.address >= 0 THEN OUT feeder.address, 2 ^ feeder.bit - 1 ELSE SOUND 1000, 2
+      CheckFeeder = 1
+    END IF
+  ELSEIF feeder.status = 1 AND t - feeder.t0 > feeder.d THEN
+      Feeder.status = 0
+      Cs(ct).k = 1
+      InitLever
+      IF feeder.address >= 0 THEN OUT feeder.address, 0 ELSE SOUND 500, 2
+      CheckFeeder = 3
+  END IF
+
+END FUNCTION
+
+SUB ActivateFeeder
+  SHARED feeder AS TFeeder
+  SHARED t
+
+  IF feeder.status = 0 THEN
+    feeder.t0 = t + feeder.delay
+    feeder.status = -1
+  END IF
+
+END SUB
