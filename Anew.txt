@@ -1,17 +1,26 @@
 DECLARE FUNCTION CheckLever& ()
 
+DECLARE SUB WaitForTime(wait_time as SINGLE)	'Runs for designated time - basically pauses the scrip
 
+DECLARE SUB DoDRLExperiment(loop_start_time as SINGLE,cycle as TCycle)
+DECLARE SUB DoBasicExperiment(loop_start_time as SINGLE, cycle as TCycle)
 
+DECLARE SUB RewardEachLever()
+DECLARE SUB RewardEachNthLever(nth%)
 '----------------------------------------------------------------------------
 '       Define user types
 '----------------------------------------------------------------------------
 TYPE TExperiment
-	DIM type AS STRING
-
+	DIM type AS STRING				'sets the type of the experiment to DRL, BASIC ...
+	DIM cycles AS TCycle
+	DIM reward as STRING			'sets the reward scenario to NTH, EACH ...
+	DRIM reward_duration as SINGLE	'
+	DIM reward_number as INTEGER	'number to define either nth reward or time during which
+	Dim inter_trial_time as SINGLE
 END TYPE
 
 TYPE TCycle
-	DIM duration AS INTEGER	'cycle duration in seconds
+	DIM duration AS SINGLE	'cycle duration in seconds
 	
 END TYPE
 
@@ -24,8 +33,8 @@ TYPE TLever
   status AS LONG
   status0 AS LONG
   sensitivity AS LONG   '(10msec)
-  address AS LONG
-  bit AS LONG
+  address AS LONG		'parallel port address
+  bit AS LONG			
 END TYPE
 
 TYPE TFeeder
@@ -40,66 +49,64 @@ END TYPE
 '----------------------------------------------------------------------------
 '       DECLARE VARIABLES
 '----------------------------------------------------------------------------
-time_since_start AS long
+time_since_start AS SINGLE
 DIM lever AS TLever
 DIM feeder AS TFeeder
 DIM experiment AS TExperiment
-
+DIM current_cycle as TCycle
 '----------------------------------------------------------------------------
 '       BASIC INICIALIZATIONS
 '----------------------------------------------------------------------------
+time_since_start = GetTime
 
 '----------------------------------------------------------------------------
 '       Main loop
 '----------------------------------------------------------------------------
-FOR i_cycle = 1 TO num_cycles STEP-1
-	start_main_cycle:		'goto point
-	cycle AS TCycle			'initialises the cycle
-	'---
-	'inner cycle loop
-	'---
-	loop_start_time! = TIMER(.01) 	'SINGLE, should be enough
+
+'get the experiment tye
+
+'get the reward type
+
+'get the reward number (seconds for 
+
+
+
+
+FOR i_cycle = 1 TO num_cycles STEP 1
+	start_main_cycle:									'goto point
+	current_cycle = experiment.cycles(i_cycle)			'initialises the cycle
 
 	'---
 	'In the designated loop time
 	'---
-	WHILE loop_start_time! + cycle.duration >= GetTime
-	  IF loop_start_time! > TIMER THEN loop_start_time! = loop_start_time! - 86400	'takes care of experimenting over midnight
-		'---
-		'checks for lever press during the cycle if the experiment is evil
-		'---
-		IF experiment.type = "evil" THEN
-		
-		END IF
-		
-		'---
-		'
-		'---
-	  
-	  
-	WEND
+	'IF loop_start_time! > TIMER THEN loop_start_time! = loop_start_time! - 86400	'takes care of experimenting over midnight - needs to be done in fucntion if necessary
 	
+	'could be maybe done better in different loop entirely - single one for each scenario
+	
+	'---
+	'signal
+	'---
+	
+	SELECT CASE experiment.type
+		CASE "DRL"
+			DoDRLExperiment()
+		CASE "BASIC"
+			DoBasicExperiment()
+	END SELECT
 	'---
 	'After the loop time ends
 	'---
-	WHILE after_loop_start_time! + cycle.duration >= GetTime
-	  IF loop_start_time! > TIMER THEN loop_start_time! = loop_start_time! - 86400	'takes care of experimenting over midnight
-		'---
-		'checks for lever press
-		'---
+	SELECT CASE experiment.reward
+		CASE "EACH"
+			RewardEachLever()
+		CASE "NTH"
+			RewardEachNthLever(experiment.reward_number)
+		CASE "TIME"
 		
+	END SELECT
 		
-		'---
-		'
-		'---
-	  
-	  
-	WEND
-		
-		
-		
+	WaitForTime(inter_trial_time)	'problem - mouse doesn't know it stopped being rewarded 
 	end_main_cycle:		'goto point
-	
 NEXT i_cycle
 
 
@@ -107,6 +114,78 @@ NEXT i_cycle
 '       End
 '----------------------------------------------------------------------------
 
+'----------------------------------------------------------------------------
+'       EXPERIMENTAL SUBROUTINES
+'----------------------------------------------------------------------------
+SUB WaitForTime (t!)
+    start_time! = GetTime
+    WHILE start_time! + t! >= GetTime
+        'basically does nothing, just waits
+    WEND
+    CLOSE
+END SUB
+
+
+SUB DoDRLExperiment()
+	SHARED lever as TLever
+	SHARED current_cycle
+	'---
+	'checks for lever press during the cycle if the experiment is evil
+	'---
+	loop_start_time! = GetTime 	'SINGLE, should be enough
+	WHILE loop_start_time! + current_cycle.duration >= GetTime
+		lever_status% = CheckLever
+		'need to log it in the script
+		if lever_status% == X THEN GOTO start_main_cycle
+	WEND
+END SUB
+
+SUB DoBasicExperiment()
+	WaitForTime(current_cycle.duration)
+END SUB
+
+'----------------------------------------------------------------------------
+'       REWARD SUBROUTINES
+'----------------------------------------------------------------------------
+
+SUB RewardEachLever()
+	RewardEachNthLever(1)
+END SUB
+
+SUB RewardFirst()
+	SHARED lever
+	SHARED experiment
+	'---
+	'checks for lever press during the cycle if the experiment is evil
+	'---
+	loop_start_time! = GetTime
+	feeder_activated% = 0
+	WHILE loop_start_time! + experiment.reward_duration >= GetTime AND feeder_activated = 0	'the mouse has only specified time to press the lever
+		lever_status% = CheckLever
+		'need to log it in the script
+		IF lever_status% == X THEN 
+			ActivateFeeder
+			feeder_activated = 1
+		ENDIF
+	WEND
+END SUB
+
+SUB RewardEachNthLever(nth%)
+	SHARED lever
+	SHARED experiment
+	
+	'---
+	'checks for lever press during the cycle if the experiment is evil
+	'---
+	number_of_presses% = 0
+	loop_start_time! = GetTime
+	WHILE loop_start_time! + experiment.reward_duration >= GetTime
+		lever_status% = CheckLever
+		'need to log it in the script
+		IF lever_status% = X THEN number_of_presses% = number_of_presses% + 1
+		if number_of_presses% MOD nth% THEN ActivateFeeder
+	WEND
+END SUB
 
 '----------------------------------------------------------------------------
 '       FUNCTIONS
@@ -115,24 +194,24 @@ FUNCTION GetTime
 	GetTime = TIMER(.01)
 END FUNCTION
 
-FUNCTION CheckLever
+FUNCTION CheckLever	'returns 1, 3 or lever.status * 2
   SHARED lever AS TLever, feeder AS TFeeder
-  SHARED t
+  SHARED time_since_start
   
-  IF lever.address >= 0 THEN
-    u = INP(lever.address)
-    lever.status = INT((u MOD 2 ^ lever.bit) / 2 ^ (lever.bit - 1))
+  IF lever.address >= 0 THEN 'only if we actually have a lever
+    parallel_input = INP(lever.address) 											'INPUT from parallel port on designated address
+    lever.status = INT((paralel_input MOD 2 ^ lever.bit) / 2 ^ (lever.bit - 1))	'need explanation for this
   END IF
 
-  IF Lever.status0 <> Lever.status THEN
+  IF Lever.status0 <> Lever.status THEN								'if the new status is different from the old one
     'lever was released or pressed including bouncing
-    lever.tPom = t
+    lever.tPom = time_since_start
   END IF
 
   CheckLever = lever.status * 2
 
-  IF lever.tPom > 0 AND t - lever.tPom >= lever.sensitivity THEN
-    IF lever.status = 1 THEN 'lever released
+  IF lever.tPom > 0 AND time_since_start - lever.tPom >= lever.sensitivity THEN 	'if there was a lever press, and it was before the time we set for sensitivity
+    IF lever.status = 1 THEN 										'lever released
       lever.n = lever.n + 1: lever.t = t: lever.tPom = -1
       CheckLever = 3
     ELSE
@@ -140,26 +219,16 @@ FUNCTION CheckLever
       CheckLever = 1
     END IF
   END IF
-
-  lever.status0 = lever.status
-
-  IF lever.nRew >= 0 AND lever.n >= lever.nRew THEN
-    lever.nRew = -1: lever.tRew = -1
-    ActivateFeeder
-  ELSEIF lever.tRew >= 0 AND lever.t >= lever.tRew THEN
-    lever.nRew = -1: lever.tRew = -1
-    ActivateFeeder
-  END IF
-
+  lever.status0 = lever.status 										'resets the status
 END FUNCTION
 
 FUNCTION CheckFeeder
   SHARED feeder AS TFeeder, Cs() AS TCycle
-  SHARED t
+  SHARED time_since_start
 
   CheckFeeder = feeder.status * 2
   IF feeder.status <= 0 THEN
-    IF t >= feeder.t0 AND t - feeder.t0 <= feeder.d THEN
+    IF time_since_start >= feeder.t0 AND time_since_start - feeder.t0 <= feeder.d THEN
       Feeder.status = 1
       IF feeder.address >= 0 THEN OUT feeder.address, 2 ^ feeder.bit - 1 ELSE SOUND 1000, 2
       CheckFeeder = 1

@@ -1,3 +1,4 @@
-CLS
-INPUT "Enter your name: ", Name$
-PRINT "Hello, "; Name$; ".  How are you today?"
+loop_start_time! = TIMER(0.01)
+WHILE loop_start_time! + 5 >= TIMER(0.01)
+	if (INKEY$ = CHR$("a$=") THEN 
+WEND

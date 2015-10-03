@@ -224,7 +224,6 @@ SUB ActivateFeeder
     Feeder.t0 = t + Feeder.delay
     Feeder.status = -1
   END IF
-
 END SUB
 
 FUNCTION CheckCycle
@@ -236,8 +235,6 @@ FUNCTION CheckCycle
     j = j + 1: InitCycle
     CheckCycle = 1
   END IF
-
-
 END FUNCTION
 
 FUNCTION CheckFeeder
@@ -258,7 +255,6 @@ FUNCTION CheckFeeder
       IF Feeder.address >= 0 THEN OUT Feeder.address, 0 ELSE SOUND 500, 2
       CheckFeeder = 3
   END IF
-
 END FUNCTION
 
 FUNCTION CheckLever
@@ -318,8 +314,6 @@ FUNCTION CheckUserAction
     CASE CHR$(27): CheckUserAction = ASC(UCASE$(key$))
     CASE ELSE: CheckUserAction = 0
   END SELECT
-
-
 END FUNCTION
 
 SUB DrawRectangle (R AS TRectangle)
