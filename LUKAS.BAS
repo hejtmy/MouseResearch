@@ -149,20 +149,34 @@ IF UCASE$(bool$) = "N" THEN END 'if N we exit the file
 '----------------------------------------------------------------------------
 '       Open output file
 '----------------------------------------------------------------------------
-DO
-  INPUT ; "Type output file name and then press Enter: ", outfile$
-  IF LEN(outfile$) = 0 THEN outfile$ = "cv3.txt": EXIT DO
-  pomfile$ = DIR$(outfile$)
-  IF LEN(pomfile$) > 0 THEN
-    PRINT outfile$; " exists. Overwrite? (A..yes, N..no): ";
-    IF UCASE$(INPUT$(1)) = "A" THEN EXIT DO
-  ELSE
-    EXIT DO
-  END IF
-LOOP
-
 fid = FREEFILE
-OPEN outfile$ FOR OUTPUT AS #fid
+name_file:
+INPUT ; "Type output file name and then press Enter: ", outfile$
+IF LEN(outfile$) = 0 THEN
+    PRINT "Choose a name, please"
+    GOTO name_file
+END IF
+OPEN outfile$ FOR BINARY AS #fid
+IF LOF(fid) <> 0 THEN 'if the file is NOT empty
+    CLOSE #fid
+    rewrite_file: 'gotopoint
+    PRINT "File already exists. Overwrite? (Y..yes, N..no):"
+    DO
+        LET k$ = INKEY$
+    LOOP UNTIL k$ <> ""
+    SELECT CASE k$
+        CASE "y"
+            OPEN outfile$ FOR OUTPUT AS #fid
+        CASE "n"
+            GOTO name_file
+        CASE ELSE
+            PRINT ("You haven't selected any valid choice")
+            GOTO rewrite_file
+    END SELECT
+ELSE
+    CLOSE #fid
+    OPEN outfile$ FOR OUTPUT AS #fid
+END IF
 
 '----------------------------------------------------------------------------
 '       Init variables
@@ -170,7 +184,7 @@ OPEN outfile$ FOR OUTPUT AS #fid
 SCREEN 12
 
 '------------
-' Change this to better seed
+'Change this to better seed
 
 RANDOMIZE (TIMER) 'only sets the seed - not a best thing for reproducibility!!!!
 

@@ -1,4 +1,5 @@
 DECLARE FUNCTION CheckLever& ()
+DECLARE FUNCTION MidnightCorrection()
 
 DECLARE SUB WaitForTime(wait_time as SINGLE)	'Runs for designated time - basically pauses the scrip
 
@@ -7,6 +8,8 @@ DECLARE SUB DoBasicExperiment(loop_start_time as SINGLE, cycle as TCycle)
 
 DECLARE SUB RewardEachLever()
 DECLARE SUB RewardEachNthLever(nth%)
+
+DECLARE SUB TryWrite(last_time as SINGLE)
 '----------------------------------------------------------------------------
 '       Define user types
 '----------------------------------------------------------------------------
@@ -54,22 +57,61 @@ DIM lever AS TLever
 DIM feeder AS TFeeder
 DIM experiment AS TExperiment
 DIM current_cycle as TCycle
+
+DIM write_interval as SINGLE	'how often do we want to log stuff
+
+DIM fstr$       'output file format string
+
 '----------------------------------------------------------------------------
+'       Open output file
+'----------------------------------------------------------------------------
+
+fid = FREEFILE
+name_file:
+INPUT ; "Type output file name and then press Enter: ", outfile$
+IF LEN(outfile$) = 0 THEN
+    PRINT "Choose a name, please"
+    GOTO name_file
+END IF
+OPEN outfile$ FOR BINARY AS #fid
+IF LOF(fid) <> 0 THEN 'if the file is NOT empty
+    CLOSE #fid
+    rewrite_file: 'gotopoint
+    PRINT "File already exists. Overwrite? (Y..yes, N..no):"
+    DO
+        LET k$ = INKEY$
+    LOOP UNTIL k$ <> ""
+    SELECT CASE k$
+        CASE "y"
+            OPEN outfile$ FOR OUTPUT AS #fid
+        CASE "n"
+            GOTO name_file
+        CASE ELSE
+            PRINT ("You haven't selected any valid choice")
+            GOTO rewrite_file
+    END SELECT
+ELSE
+    CLOSE #fid
+    OPEN outfile$ FOR OUTPUT AS #fid
+END IF
+
+
+'-----------------------------------
 '       BASIC INICIALIZATIONS
-'----------------------------------------------------------------------------
-time_since_start = GetTime
+'-----------------------------------
 
-'----------------------------------------------------------------------------
-'       Main loop
-'----------------------------------------------------------------------------
-
-'get the experiment tye
+'get the experiment type
 
 'get the reward type
 
 'get the reward number (seconds for 
 
+'----------------------------------------------------------------------------
+'       Main loop
+'----------------------------------------------------------------------------
 
+
+time_since_start = GetTime			'START OF THE EXPERIMENT
 
 
 FOR i_cycle = 1 TO num_cycles STEP 1
@@ -79,7 +121,6 @@ FOR i_cycle = 1 TO num_cycles STEP 1
 	'---
 	'In the designated loop time
 	'---
-	'IF loop_start_time! > TIMER THEN loop_start_time! = loop_start_time! - 86400	'takes care of experimenting over midnight - needs to be done in fucntion if necessary
 	
 	'could be maybe done better in different loop entirely - single one for each scenario
 	
@@ -102,13 +143,14 @@ FOR i_cycle = 1 TO num_cycles STEP 1
 		CASE "NTH"
 			RewardEachNthLever(experiment.reward_number)
 		CASE "TIME"
-		
 	END SELECT
 		
 	WaitForTime(inter_trial_time)	'problem - mouse doesn't know it stopped being rewarded 
 	end_main_cycle:		'goto point
 NEXT i_cycle
 
+CLOSE #fid
+PRINT "EXPERIMENT FINISHED, PLEASE PRESS A KEY"
 
 '----------------------------------------------------------------------------
 '       End
@@ -117,14 +159,13 @@ NEXT i_cycle
 '----------------------------------------------------------------------------
 '       EXPERIMENTAL SUBROUTINES
 '----------------------------------------------------------------------------
-SUB WaitForTime (t!)
+SUB WaitForTime (t!) 'basically does nothing, just waits
     start_time! = GetTime
     WHILE start_time! + t! >= GetTime
-        'basically does nothing, just waits
+        
     WEND
     CLOSE
 END SUB
-
 
 SUB DoDRLExperiment()
 	SHARED lever as TLever
@@ -141,7 +182,11 @@ SUB DoDRLExperiment()
 END SUB
 
 SUB DoBasicExperiment()
-	WaitForTime(current_cycle.duration)
+	start_time! = GetTime
+	last_time_write! = start_time!	'gets the last time a log has been made
+    WHILE start_time! + t! >= GetTime
+        last_time_write! = TryWrite(last_time_write!)
+    WEND
 END SUB
 
 '----------------------------------------------------------------------------
@@ -167,6 +212,7 @@ SUB RewardFirst()
 			ActivateFeeder
 			feeder_activated = 1
 		ENDIF
+		
 	WEND
 END SUB
 
@@ -192,6 +238,19 @@ END SUB
 '----------------------------------------------------------------------------
 FUNCTION GetTime
 	GetTime = TIMER(.01)
+END FUNCTION
+
+FUNCTION MidnightCorrection(time!)
+	IF time! > TIMER THEN MidnightCorrection! = time! - 86400 'takes care of experimenting over midnight - needs to be done in fucntion if necessary
+	ELSE MidnightCorrection! = time!
+	END IF
+END FUNCTION
+
+FUNCTION TryWrite(last_time!)
+	IF last_time! - GetTime > write_interval THEN 
+		Write2File				'we write the log
+		TryWrite = GetTime		'and resend the time to the SUBROUTINE
+	END IF
 END FUNCTION
 
 FUNCTION CheckLever	'returns 1, 3 or lever.status * 2
@@ -251,5 +310,37 @@ SUB ActivateFeeder
     feeder.t0 = t + feeder.delay
     feeder.status = -1
   END IF
+
+END SUB
+
+
+SUB Write2File
+
+  SHARED lever AS TLever, feeder AS TFeeder
+  SHARED t
+	
+	'WHAT do we want to write down?
+    PRINT #fid, USING fstr$; msg; t; tc; c + 1; h + 1; ct + 1;
+    PRINT #fid, USING fstr$; Cs(ct).sch(Cs(ct).k);
+    FOR j = LBOUND(Rs) TO UBOUND(Rs)
+      PRINT #fid, USING fstr$; Rs(j).x; Rs(j).y;
+    NEXT j
+    PRINT #fid,
+END SUB
+
+SUB Write2Screen
+  SHARED Lever AS TLever, Feeder AS TFeeder
+  SHARED Cs() AS TCycle, Rs() AS TRectangle, Nps()
+  SHARED t, tc, c, ct, h, fid, msg, fstr$, key$
+
+
+  LOCATE 1, 1
+  PRINT "t:"; INT(t / 100); INT(Lever.tRew / 100);
+  PRINT ", #p:"; Lever.n; Lever.nRew; "#pct:";
+  FOR k = LBOUND(Nps) TO UBOUND(Nps) - 1: PRINT Nps(k); : NEXT k
+  PRINT ", #rew:"; Nps(UBOUND(Nps));
+  'PRINT ", tc:"; FIX(tc / 100);
+  PRINT ", c:"; c + 1; ", h:"; h + 1; "msg:"; USING "######"; msg
+
 
 END SUB
