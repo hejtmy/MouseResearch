@@ -10,21 +10,25 @@ DECLARE SUB RewardEachLever()
 DECLARE SUB RewardEachNthLever(nth%)
 
 DECLARE SUB TryWrite(last_time as SINGLE)
+DECLARE SUB FillCycles(n_cycles%,c_dur!)
+
+
+OPTION BASE 1
 '----------------------------------------------------------------------------
 '       Define user types
 '----------------------------------------------------------------------------
+' $DYNAMIC
+' $DYNAMIC
 TYPE TExperiment
-	DIM type AS STRING				'sets the type of the experiment to DRL, BASIC ...
-	DIM cycles AS TCycle
-	DIM reward as STRING			'sets the reward scenario to NTH, EACH ...
-	DRIM reward_duration as SINGLE	'
-	DIM reward_number as INTEGER	'number to define either nth reward or time during which
-	Dim inter_trial_time as SINGLE
+    type AS STRING * 10 'sets the type of the experiment to DRL, BASIC ...
+    reward AS STRING * 10 'sets the reward scenario to NTH, EACH ...
+    reward_duration AS SINGLE '
+    reward_number AS INTEGER 'number to define either nth reward or time during which
+    inter_trial_time AS SINGLE
 END TYPE
 
 TYPE TCycle
-	DIM duration AS SINGLE	'cycle duration in seconds
-	
+	duration AS SINGLE	'cycle duration in seconds
 END TYPE
 
 TYPE TLever
@@ -48,7 +52,6 @@ TYPE TFeeder
   address AS LONG
   bit AS LONG
 END TYPE
-
 '----------------------------------------------------------------------------
 '       DECLARE VARIABLES
 '----------------------------------------------------------------------------
@@ -57,7 +60,6 @@ DIM lever AS TLever
 DIM feeder AS TFeeder
 DIM experiment AS TExperiment
 DIM current_cycle as TCycle
-
 DIM write_interval as SINGLE	'how often do we want to log stuff
 
 DIM fstr$       'output file format string
@@ -95,16 +97,58 @@ ELSE
     OPEN outfile$ FOR OUTPUT AS #fid
 END IF
 
-
 '-----------------------------------
 '       BASIC INICIALIZATIONS
 '-----------------------------------
 
 'get the experiment type
+get_experiment_type:
+INPUT ; "Please enter experiment type (basic, drl): ", e_type$
+SELECT CASE e_type$
+	CASE "drl"
+		experiment.type = "DRL"
+	CASE "basic"
+		 experiment.type = "BASIC"
+	CASE ELSE
+		PRINT ("You haven't selected any valid choice")
+		GOTO get_experiment_type
+END SELECT
+
+'get_experiment_cycles
+INPUT "How many cycles should there be in an experiment?: ", n_cycles% 			'THIS IS NOT VALIDATED! TODO
+
+'get_experiment_duration
+INPUT "How long should the experiment cycle cycle last in seconds?: ", c_dur! 			'THIS IS NOT VALIDATED! TODO
+
+DIM SHARED cycles(n_cycles%) AS TCycle
+FillCycles(n_cycles%,c_dur!)
 
 'get the reward type
+get_reward_type:
+
+INPUT ; "Please enter reward type (each, nth, first): ", r_type$
+SELECT CASE e_type$
+	CASE "first"
+		experiment.reward = "FIRST"
+	CASE "each"
+		experiment.reward = "EACH"
+	CASE "nth"
+		experiment.reward = "NTH"
+	CASE ELSE
+		PRINT ("You haven't selected any valid choice")
+		GOTO get_reward_type
+END SELECT
 
 'get the reward number (seconds for 
+IF experiment.reward = "NTH" THEN
+	INPUT "You selected each nth lever press would bring reward. Please enter how often should that be (2,3,5 etc.): ", r_num% 			'THIS IS NOT VALIDATED! TODO
+	experiment.reward_number = r_num%
+END IF
+
+'get_reward_duration
+INPUT "How long should the reward cycle last?: ", r_dur! 			'THIS IS NOT VALIDATED! TODO
+experiment.reward_duration = r_dur!
+
 
 '----------------------------------------------------------------------------
 '       Main loop
@@ -116,7 +160,7 @@ time_since_start = GetTime			'START OF THE EXPERIMENT
 
 FOR i_cycle = 1 TO num_cycles STEP 1
 	start_main_cycle:									'goto point
-	current_cycle = experiment.cycles(i_cycle)			'initialises the cycle
+	current_cycle = cycles(i_cycle)						'initialises the cycle
 
 	'---
 	'In the designated loop time
@@ -146,14 +190,14 @@ FOR i_cycle = 1 TO num_cycles STEP 1
 	END SELECT
 		
 	WaitForTime(inter_trial_time)	'problem - mouse doesn't know it stopped being rewarded 
-	end_main_cycle:		'goto point
+	end_main_cycle:					'goto point
 NEXT i_cycle
 
 CLOSE #fid
 PRINT "EXPERIMENT FINISHED, PLEASE PRESS A KEY"
 
 '----------------------------------------------------------------------------
-'       End
+'       END
 '----------------------------------------------------------------------------
 
 '----------------------------------------------------------------------------
@@ -231,6 +275,17 @@ SUB RewardEachNthLever(nth%)
 		IF lever_status% = X THEN number_of_presses% = number_of_presses% + 1
 		if number_of_presses% MOD nth% THEN ActivateFeeder
 	WEND
+END SUB
+
+'----------------------------------------------------------------------------
+'       HELPER SUBROUTINES
+'----------------------------------------------------------------------------
+'Fills Cycles with the same values that are provided
+SUB FillCycles(n_cycles%,c_dur!)
+	SHARED cycles
+	FOR i = 1 TO n_cycles% STEP 1
+		cycles(i).duration=c_dur!
+	NEXT i
 END SUB
 
 '----------------------------------------------------------------------------
