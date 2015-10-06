@@ -12,13 +12,10 @@ DECLARE SUB RewardEachNthLever(nth%)
 DECLARE SUB TryWrite(last_time as SINGLE)
 DECLARE SUB FillCycles(n_cycles%,c_dur!)
 
-
 OPTION BASE 1
 '----------------------------------------------------------------------------
 '       Define user types
 '----------------------------------------------------------------------------
-' $DYNAMIC
-' $DYNAMIC
 TYPE TExperiment
     type AS STRING * 10 'sets the type of the experiment to DRL, BASIC ...
     reward AS STRING * 10 'sets the reward scenario to NTH, EACH ...
@@ -59,10 +56,10 @@ time_since_start AS SINGLE
 DIM lever AS TLever
 DIM feeder AS TFeeder
 DIM experiment AS TExperiment
-DIM current_cycle as TCycle
+DIM current_cycle as TCycle		
 DIM write_interval as SINGLE	'how often do we want to log stuff
-
-DIM fstr$       'output file format string
+DIM num_cycles as INTEGER		'number of cycles in the experimental session
+DIM fstr$       				'output file format string
 
 '----------------------------------------------------------------------------
 '       Open output file
@@ -101,6 +98,8 @@ END IF
 '       BASIC INICIALIZATIONS
 '-----------------------------------
 
+'PUTS the option to skip all this to either load variables from a different source or to let the defaults take over
+
 'get the experiment type
 get_experiment_type:
 INPUT ; "Please enter experiment type (basic, drl): ", e_type$
@@ -115,15 +114,15 @@ SELECT CASE e_type$
 END SELECT
 
 'get_experiment_cycles
-INPUT "How many cycles should there be in an experiment?: ", n_cycles% 			'THIS IS NOT VALIDATED! TODO
+INPUT "How many cycles should there be in an experiment?: ", num_cycles 			'THIS IS NOT VALIDATED! TODO
 
 'get_experiment_duration
 INPUT "How long should the experiment cycle cycle last in seconds?: ", c_dur! 			'THIS IS NOT VALIDATED! TODO
 
-DIM SHARED cycles(n_cycles%) AS TCycle
-FillCycles(n_cycles%,c_dur!)
+DIM SHARED cycles(num_cycles) AS TCycle
+FillCycles(num_cycles,c_dur!)		'basically fills each cycle with predefined information - could be done easier, I was aiming for TYpes before I realized thay are ddifficult to work with in BASIC
 
-'get the reward type
+'INPUT the reward type
 get_reward_type:
 
 INPUT ; "Please enter reward type (each, nth, first): ", r_type$
@@ -154,33 +153,35 @@ experiment.reward_duration = r_dur!
 '       Main loop
 '----------------------------------------------------------------------------
 
-
-time_since_start = GetTime			'START OF THE EXPERIMENT
-
+time_since_start = GetTime								'START OF THE EXPERIMENT
 
 FOR i_cycle = 1 TO num_cycles STEP 1
-	start_main_cycle:									'goto point
 	current_cycle = cycles(i_cycle)						'initialises the cycle
+	start_main_cycle:									'goto point
 
 	'---
 	'In the designated loop time
 	'---
-	
-	'could be maybe done better in different loop entirely - single one for each scenario
-	
+
 	'---
-	'signal
+	'	SIGNAL
 	'---
 	
+	'---
+	'	TRAINING PHASE
+	'---
+	'plays the experimental scenario based on the input values
 	SELECT CASE experiment.type
 		CASE "DRL"
 			DoDRLExperiment()
 		CASE "BASIC"
 			DoBasicExperiment()
 	END SELECT
+	
 	'---
-	'After the loop time ends
+	'	REWARD PHASE
 	'---
+	
 	SELECT CASE experiment.reward
 		CASE "EACH"
 			RewardEachLever()
@@ -189,7 +190,7 @@ FOR i_cycle = 1 TO num_cycles STEP 1
 		CASE "TIME"
 	END SELECT
 		
-	WaitForTime(inter_trial_time)	'problem - mouse doesn't know it stopped being rewarded 
+	WaitForTime(inter_trial_time)	'problem - mouse doesn't know it stopped being rewarded - how to distinguis inter trial and reward phase?
 	end_main_cycle:					'goto point
 NEXT i_cycle
 
@@ -217,11 +218,12 @@ SUB DoDRLExperiment()
 	'---
 	'checks for lever press during the cycle if the experiment is evil
 	'---
-	loop_start_time! = GetTime 	'SINGLE, should be enough
+	loop_start_time! = GetTime 			'SINGLE, should be enough
+	last_time_write! = start_time!		'gets the last time a log has been made
 	WHILE loop_start_time! + current_cycle.duration >= GetTime
+		last_time_write! = TryWrite(last_time_write!)
 		lever_status% = CheckLever
-		'need to log it in the script
-		if lever_status% == X THEN GOTO start_main_cycle
+		if lever_status% == X THEN GOTO start_main_cycle 	'the evil step
 	WEND
 END SUB
 
@@ -301,10 +303,11 @@ FUNCTION MidnightCorrection(time!)
 	END IF
 END FUNCTION
 
-FUNCTION TryWrite(last_time!)
-	IF last_time! - GetTime > write_interval THEN 
-		Write2File				'we write the log
-		TryWrite = GetTime		'and resend the time to the SUBROUTINE
+FUNCTION TryWrite(time!)
+	IF time! - GetTime > write_interval THEN 		'if the time from the last log is larger than the logging frequency
+		Write2File									'we write the log
+		TryWrite = GetTime							'and send the the time of the log to the SUBROUTINE, so that it knows when it was made								
+	ELSE TryWrite = time!							'otherwise we send the time back
 	END IF
 END FUNCTION
 
@@ -314,7 +317,7 @@ FUNCTION CheckLever	'returns 1, 3 or lever.status * 2
   
   IF lever.address >= 0 THEN 'only if we actually have a lever
     parallel_input = INP(lever.address) 											'INPUT from parallel port on designated address
-    lever.status = INT((paralel_input MOD 2 ^ lever.bit) / 2 ^ (lever.bit - 1))	'need explanation for this
+    lever.status = INT((paralel_input MOD 2 ^ lever.bit) / 2 ^ (lever.bit - 1))		'need explanation for this
   END IF
 
   IF Lever.status0 <> Lever.status THEN								'if the new status is different from the old one
