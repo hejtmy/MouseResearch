@@ -29,25 +29,21 @@ TYPE TCycle
 END TYPE
 
 TYPE TLever
-  n AS LONG             'number of the last response
-  t AS LONG             'time of the last response
-  nRew AS LONG          'number of the next rewarded response
-  tRew AS LONG          'min time of the next rewarded response
-  tPom AS LONG          '
-  status AS LONG
-  status0 AS LONG
-  sensitivity AS LONG   '(10msec)
-  address AS LONG		'parallel port address
-  bit AS LONG			
+  status AS INTEGER				'lever status
+  last_status AS INTEGER		'last known status
+  last_time_changed AS SINGLE	'last time the lever changed status
+  sensitivity AS SINGLE			'(10msec)
+  address AS LONG				'parallel port address
+  bit AS LONG					'which bit on the port is used?
 END TYPE
 
 TYPE TFeeder
-  d AS LONG             'duration (10msec) of feeder activation
-  delay AS LONG         'activation delay (10msec)
-  t0 AS LONG            'time (10msec) of the last activation
-  status AS LONG        '0..no activated, -1 or 1..activated
-  address AS LONG
-  bit AS LONG
+  duration AS SINGLE				'duration (10msec) of feeder activation
+  delay AS SINGLE         			'activation delay (10msec)
+  last_time_activated AS SINGLE		'time (10msec) of the last activation
+  status AS INTEGER					'0..no activated, -1 or 1..activated
+  address AS LONG					'parallel port address
+  bit AS LONG						'which bit on the port is used:
 END TYPE
 '----------------------------------------------------------------------------
 '       DECLARE VARIABLES
@@ -97,6 +93,29 @@ END IF
 '-----------------------------------
 '       BASIC INICIALIZATIONS
 '-----------------------------------
+
+INPUT ; "Which computer are you runing the experiment on? (right, left, test): ", computer$
+SELECT CASE computer$
+	CASE "right"
+		Lever.address = &H300
+		Lever.bit = 1
+		Feeder.address = &H302
+		Feeder.bit = 1
+	CASE "left"
+		Lever.address = &H379
+		Lever.bit = 5
+		Feeder.address = &H378
+		Feeder.bit = 2
+	CASE "test"
+		Lever.address = -1
+		Lever.bit = 0
+		Feeder.address = -1
+		Feeder.bit = 0
+	CASE ELSE
+		PRINT ("You haven't selected any valid choice")
+		GOTO get_experiment_type
+END SELECT
+
 
 'PUTS the option to skip all this to either load variables from a different source or to let the defaults take over
 
@@ -148,7 +167,12 @@ END IF
 INPUT "How long should the reward cycle last?: ", r_dur! 			'THIS IS NOT VALIDATED! TODO
 experiment.reward_duration = r_dur!
 
+'----------------------------------------------------------------------------
+'       PORT ACTIVATION
+'----------------------------------------------------------------------------
 
+IF Feeder.address = &H302 THEN OUT &H303, &H92
+Feeder.status = 0
 '----------------------------------------------------------------------------
 '       Main loop
 '----------------------------------------------------------------------------
@@ -194,6 +218,7 @@ FOR i_cycle = 1 TO num_cycles STEP 1
 	end_main_cycle:					'goto point
 NEXT i_cycle
 
+'needs to turn off the feeder
 CLOSE #fid
 PRINT "EXPERIMENT FINISHED, PLEASE PRESS A KEY"
 
@@ -221,6 +246,7 @@ SUB DoDRLExperiment()
 	loop_start_time! = GetTime 			'SINGLE, should be enough
 	last_time_write! = start_time!		'gets the last time a log has been made
 	WHILE loop_start_time! + current_cycle.duration >= GetTime
+		time_since_start = GetTime
 		last_time_write! = TryWrite(last_time_write!)
 		lever_status% = CheckLever
 		if lever_status% == X THEN GOTO start_main_cycle 	'the evil step
@@ -231,6 +257,7 @@ SUB DoBasicExperiment()
 	start_time! = GetTime
 	last_time_write! = start_time!	'gets the last time a log has been made
     WHILE start_time! + t! >= GetTime
+		time_since_start = GetTime
         last_time_write! = TryWrite(last_time_write!)
     WEND
 END SUB
@@ -312,65 +339,68 @@ FUNCTION TryWrite(time!)
 END FUNCTION
 
 FUNCTION CheckLever	'returns 1, 3 or lever.status * 2
-  SHARED lever AS TLever, feeder AS TFeeder
-  SHARED time_since_start
+	SHARED lever AS TLever, feeder AS TFeeder
+	SHARED time_since_start
   
-  IF lever.address >= 0 THEN 'only if we actually have a lever
-    parallel_input = INP(lever.address) 											'INPUT from parallel port on designated address
-    lever.status = INT((paralel_input MOD 2 ^ lever.bit) / 2 ^ (lever.bit - 1))		'need explanation for this
-  END IF
+	IF lever.address >= 0 THEN 'only if we actually have a lever
+		parallel_input = INP(lever.address) 											'INPUT from parallel port on designated address
+		lever.status = INT((paralel_input MOD 2 ^ lever.bit) / 2 ^ (lever.bit - 1))		'we turn paralel_input into I guess either 0 or 1
+	END IF
 
-  IF Lever.status0 <> Lever.status THEN								'if the new status is different from the old one
-    'lever was released or pressed including bouncing
-    lever.tPom = time_since_start
-  END IF
-
-  CheckLever = lever.status * 2
-
-  IF lever.tPom > 0 AND time_since_start - lever.tPom >= lever.sensitivity THEN 	'if there was a lever press, and it was before the time we set for sensitivity
-    IF lever.status = 1 THEN 										'lever released
-      lever.n = lever.n + 1: lever.t = t: lever.tPom = -1
-      CheckLever = 3
-    ELSE
-      lever.tPom = -1
-      CheckLever = 1
-    END IF
-  END IF
-  lever.status0 = lever.status 										'resets the status
+	IF lever.last_status <> lever.status THEN		'if the new status is different from the old one
+		'lever was released or pressed including bouncing
+		lever.last_time_changed = time_since_start
+	END IF
+	
+	CheckLever = lever.status * 2	'if it was 1, it turns to 2
+	'if the time since last change is bigger than sensitivity of the lever, we take a look on what the value is
+	
+	IF time_since_start - lever.last_time_changed >= lever.sensitivity THEN 	'if there was a lever press, and it was before the time we set for sensitivity
+		IF lever.status = 1 THEN 									'lever pressed?
+			lever.last_time_changed = -1
+			CheckLever = 3
+		ELSE
+			lever.last_time_changed = -1
+			CheckLever = 1
+		END IF
+	END IF
+	
+	lever.last_status = lever.status 'resets the status
+	
 END FUNCTION
 
 FUNCTION CheckFeeder
-  SHARED feeder AS TFeeder, Cs() AS TCycle
-  SHARED time_since_start
+	SHARED feeder AS TFeeder, Cs() AS TCycle
+	SHARED time_since_start
 
-  CheckFeeder = feeder.status * 2
-  IF feeder.status <= 0 THEN
-    IF time_since_start >= feeder.t0 AND time_since_start - feeder.t0 <= feeder.d THEN
-      Feeder.status = 1
-      IF feeder.address >= 0 THEN OUT feeder.address, 2 ^ feeder.bit - 1 ELSE SOUND 1000, 2
-      CheckFeeder = 1
-    END IF
-  ELSEIF feeder.status = 1 AND t - feeder.t0 > feeder.d THEN
-      Feeder.status = 0
-      Cs(ct).k = 1
-      InitLever
-      IF feeder.address >= 0 THEN OUT feeder.address, 0 ELSE SOUND 500, 2
-      CheckFeeder = 3
-  END IF
-
+	CheckFeeder = feeder.status * 2		'What is this?
+	IF feeder.status <= 0 THEN			'this happens in the activate feeder
+		'if we want to activate the feeder and the time of activation was set in the ActivateFeeder function
+		IF time_since_start >= feeder.last_time_activated THEN
+			Feeder.status = 1		'sets the status to activated
+			'actually turns on the feeder or BEEPS in case the parallel port does not exist
+			IF feeder.address >= 0 THEN OUT feeder.address, 2 ^ feeder.bit - 1 ELSE SOUND 1000, 2
+			CheckFeeder = 1
+		END IF
+	'if we wanted to have the feeder activated, but it's already running for its duration, we turn it off
+	ELSEIF feeder.status = 1 AND time_since_start - feeder.last_time_activated > feeder.duration THEN
+		'this allows the feeder to be turned on
+		feeder.status = 0
+		'InitLever			'do I need it? don't think so
+		IF feeder.address >= 0 THEN OUT feeder.address, 0 ELSE SOUND 500, 2		'turns the feeder off
+		CheckFeeder = 3
+	END IF
 END FUNCTION
 
-SUB ActivateFeeder
-  SHARED feeder AS TFeeder
-  SHARED t
-
-  IF feeder.status = 0 THEN
-    feeder.t0 = t + feeder.delay
-    feeder.status = -1
-  END IF
-
+SUB ActivateFeeder				'only changes the status, CheckFeeder actually turns it on
+	SHARED feeder AS TFeeder
+	SHARED time_since_start
+	'if the feeder is not running, we can turn it on
+	IF feeder.status = 0 THEN
+		feeder.last_time_activated = time_since_start + feeder.delay
+		feeder.status = -1
+	END IF
 END SUB
-
 
 SUB Write2File
 

@@ -373,7 +373,6 @@ SUB InitLever
             pom = INT(RND * (pom + 1)) + Cs(ct).x(k)
             Lever.tRew = Lever.t + pom
   END SELECT
-
 END SUB
 
 FUNCTION InitRectangles
