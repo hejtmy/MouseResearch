@@ -89,7 +89,7 @@ ELSE
     CLOSE #fid
     OPEN outfile$ FOR OUTPUT AS #fid
 END IF
-
+PRINT ""
 '-----------------------------------
 '       BASIC INICIALIZATIONS
 '-----------------------------------
@@ -116,9 +116,8 @@ SELECT CASE computer$
 		GOTO select_computer
 END SELECT
 
-
 'PUTS the option to skip all this to either load variables from a different source or to let the defaults take over
-
+PRINT ""
 'get the experiment type
 get_experiment_type:
 INPUT ; "Please enter experiment type (basic, drl): ", e_type$
@@ -131,23 +130,18 @@ SELECT CASE e_type$
 		PRINT ("You haven't selected any valid choice")
 		GOTO get_experiment_type
 END SELECT
-
+PRINT ""
 'get_experiment_cycles
 INPUT "How many cycles should there be in an experiment?: ", num_cycles% 			'THIS IS NOT VALIDATED! TODO
-
+PRINT ""
 'get_experiment_duration
 INPUT "How long should the experiment cycle cycle last in seconds?: ", c_dur! 			'THIS IS NOT VALIDATED! TODO
 
-DIM SHARED cycles(num_cycles%) AS TCycle
-FOR i = 1 TO n_cycles% STEP 1
-	cycles(i).duration=c_dur!
-NEXT i	'basically fills each cycle with predefined information - could be done easier, I was aiming for TYpes before I realized thay are ddifficult to work with in BASIC
-
 'INPUT the reward type
 get_reward_type:
-
+PRINT ""
 INPUT ; "Please enter reward type (each, nth, first): ", r_type$
-SELECT CASE e_type$
+SELECT CASE r_type$
 	CASE "first"
 		experiment.reward = "FIRST"
 	CASE "each"
@@ -161,10 +155,11 @@ END SELECT
 
 'get the reward number (seconds for 
 IF experiment.reward = "NTH" THEN
+	PRINT ""
 	INPUT "You selected each nth lever press would bring reward. Please enter how often should that be (2,3,5 etc.): ", r_num% 			'THIS IS NOT VALIDATED! TODO
 	experiment.reward_number = r_num%
 END IF
-
+PRINT ""
 'get_reward_duration
 INPUT "How long should the reward cycle last?: ", r_dur! 			'THIS IS NOT VALIDATED! TODO
 experiment.reward_duration = r_dur!
@@ -186,10 +181,8 @@ lever.sensitivity = 0.01
 
 time_since_start = GetTime								'START OF THE EXPERIMENT
 
-FOR i_cycle = 1 TO num_cycles STEP 1
-	current_cycle = cycles(i_cycle)						'initialises the cycle
+FOR i_cycle = 1 TO num_cycles% STEP 1					
 	start_main_cycle:									'goto point
-
 	'---
 	'In the designated loop time
 	'---
@@ -201,14 +194,24 @@ FOR i_cycle = 1 TO num_cycles STEP 1
 	'---
 	'	TEST PHASE
 	'---
-	'plays the experimental scenario based on the input values
-	SELECT CASE experiment.type
-		CASE "DRL"
-			DoDRLExperiment
-		CASE "BASIC"
-			DoBasicExperiment
-	END SELECT
-	
+	loop_start_time! = GetTime 			'SINGLE, should be enough
+	last_time_write! = loop_start_time!	'gets the last time a log has been made
+	WHILE loop_start_time! + c_dur! >= GetTime
+	time_since_start = GetTime
+		'plays the experimental scenario based on the input values
+		SELECT CASE experiment.type
+			'---
+			'checks for lever press during the cycle if the experiment is evil
+			'---
+			CASE "DRL"
+				lever_status% = CheckLever
+				'Write that the mouse pressed the lever
+				IF lever_status% = 1 THEN GOTO start_main_cycle 	'the evil step
+			CASE "BASIC"
+				last_time_write! = TryWrite(last_time_write!)
+		END SELECT
+	last_time_write! = TryWrite(last_time_write!)
+	WEND
 	'---
 	'	REWARD PHASE
 	'---
@@ -245,31 +248,6 @@ SUB WaitForTime (t!) 'basically does nothing, just waits
     CLOSE
 END SUB
 
-SUB DoDRLExperiment()
-	SHARED lever as TLever
-	SHARED current_cycle
-	'---
-	'checks for lever press during the cycle if the experiment is evil
-	'---
-	loop_start_time! = GetTime 			'SINGLE, should be enough
-	last_time_write! = start_time!		'gets the last time a log has been made
-	WHILE loop_start_time! + current_cycle.duration >= GetTime
-		time_since_start = GetTime
-		last_time_write! = TryWrite(last_time_write!)
-		lever_status% = CheckLever
-		IF lever_status% = 1 THEN GOTO start_main_cycle 	'the evil step
-	WEND
-END SUB
-
-SUB DoBasicExperiment()
-	start_time! = GetTime
-	last_time_write! = start_time!	'gets the last time a log has been made
-    WHILE start_time! + t! >= GetTime
-		time_since_start = GetTime
-        last_time_write! = TryWrite(last_time_write!)
-    WEND
-END SUB
-
 '----------------------------------------------------------------------------
 '       REWARD SUBROUTINES
 '----------------------------------------------------------------------------
@@ -299,7 +277,6 @@ END SUB
 SUB RewardEachNthLever(nth%)
 	SHARED lever
 	SHARED experiment
-	
 	'---
 	'checks for lever press during the cycle if the experiment is evil
 	'---
