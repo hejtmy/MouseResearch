@@ -48,7 +48,7 @@ END TYPE
 '----------------------------------------------------------------------------
 '       DECLARE VARIABLES
 '----------------------------------------------------------------------------
-time_since_start AS SINGLE
+DIM time_since_start AS SINGLE
 DIM lever AS TLever
 DIM feeder AS TFeeder
 DIM experiment AS TExperiment
@@ -133,13 +133,15 @@ SELECT CASE e_type$
 END SELECT
 
 'get_experiment_cycles
-INPUT "How many cycles should there be in an experiment?: ", num_cycles 			'THIS IS NOT VALIDATED! TODO
+INPUT "How many cycles should there be in an experiment?: ", num_cycles% 			'THIS IS NOT VALIDATED! TODO
 
 'get_experiment_duration
 INPUT "How long should the experiment cycle cycle last in seconds?: ", c_dur! 			'THIS IS NOT VALIDATED! TODO
 
-DIM SHARED cycles(num_cycles) AS TCycle
-FillCycles(num_cycles,c_dur!)		'basically fills each cycle with predefined information - could be done easier, I was aiming for TYpes before I realized thay are ddifficult to work with in BASIC
+DIM SHARED cycles(num_cycles%) AS TCycle
+FOR i = 1 TO n_cycles% STEP 1
+	cycles(i).duration=c_dur!
+NEXT i	'basically fills each cycle with predefined information - could be done easier, I was aiming for TYpes before I realized thay are ddifficult to work with in BASIC
 
 'INPUT the reward type
 get_reward_type:
@@ -173,6 +175,11 @@ experiment.reward_duration = r_dur!
 
 IF Feeder.address = &H302 THEN OUT &H303, &H92
 Feeder.status = 0
+
+'----------------------------------------------------------------------------
+'       LEVER FEEDER INICIALIZATIONS
+'----------------------------------------------------------------------------
+lever.sensitivity = 0.01
 '----------------------------------------------------------------------------
 '       Main loop
 '----------------------------------------------------------------------------
@@ -192,23 +199,22 @@ FOR i_cycle = 1 TO num_cycles STEP 1
 	'---
 	
 	'---
-	'	TRAINING PHASE
+	'	TEST PHASE
 	'---
 	'plays the experimental scenario based on the input values
 	SELECT CASE experiment.type
 		CASE "DRL"
-			DoDRLExperiment()
+			DoDRLExperiment
 		CASE "BASIC"
-			DoBasicExperiment()
+			DoBasicExperiment
 	END SELECT
 	
 	'---
 	'	REWARD PHASE
 	'---
-	
 	SELECT CASE experiment.reward
 		CASE "EACH"
-			RewardEachLever()
+			RewardEachLever
 		CASE "NTH"
 			RewardEachNthLever(experiment.reward_number)
 		CASE "TIME"
@@ -219,7 +225,9 @@ FOR i_cycle = 1 TO num_cycles STEP 1
 NEXT i_cycle
 
 'needs to turn off the feeder
+
 CLOSE #fid
+
 PRINT "EXPERIMENT FINISHED, PLEASE PRESS A KEY"
 
 '----------------------------------------------------------------------------
@@ -249,7 +257,7 @@ SUB DoDRLExperiment()
 		time_since_start = GetTime
 		last_time_write! = TryWrite(last_time_write!)
 		lever_status% = CheckLever
-		if lever_status% == X THEN GOTO start_main_cycle 	'the evil step
+		IF lever_status% = 1 THEN GOTO start_main_cycle 	'the evil step
 	WEND
 END SUB
 
@@ -281,11 +289,10 @@ SUB RewardFirst()
 	WHILE loop_start_time! + experiment.reward_duration >= GetTime AND feeder_activated = 0	'the mouse has only specified time to press the lever
 		lever_status% = CheckLever
 		'need to log it in the script
-		IF lever_status% == X THEN 
+		IF lever_status% = 1 THEN 
 			ActivateFeeder
 			feeder_activated = 1
-		ENDIF
-		
+		END IF
 	WEND
 END SUB
 
@@ -301,7 +308,7 @@ SUB RewardEachNthLever(nth%)
 	WHILE loop_start_time! + experiment.reward_duration >= GetTime
 		lever_status% = CheckLever
 		'need to log it in the script
-		IF lever_status% = X THEN number_of_presses% = number_of_presses% + 1
+		IF lever_status% = 1 THEN number_of_presses% = number_of_presses% + 1
 		if number_of_presses% MOD nth% THEN ActivateFeeder
 	WEND
 END SUB
@@ -309,13 +316,6 @@ END SUB
 '----------------------------------------------------------------------------
 '       HELPER SUBROUTINES
 '----------------------------------------------------------------------------
-'Fills Cycles with the same values that are provided
-SUB FillCycles(n_cycles%,c_dur!)
-	SHARED cycles
-	FOR i = 1 TO n_cycles% STEP 1
-		cycles(i).duration=c_dur!
-	NEXT i
-END SUB
 
 '----------------------------------------------------------------------------
 '       FUNCTIONS
@@ -324,10 +324,12 @@ FUNCTION GetTime
 	GetTime = TIMER(.01)
 END FUNCTION
 
-FUNCTION MidnightCorrection(time!)
-	IF time! > TIMER THEN MidnightCorrection! = time! - 86400 'takes care of experimenting over midnight - needs to be done in fucntion if necessary
-	ELSE MidnightCorrection! = time!
-	END IF
+FUNCTION MidnightCorrection (time!)
+IF time! > TIMER THEN
+    MidnightCorrection! = time! - 86400 'takes care of experimenting over midnight - needs to be done in fucntion if necessary
+ELSE
+    MidnightCorrection! = time!
+END IF
 END FUNCTION
 
 FUNCTION TryWrite(time!)
@@ -338,10 +340,12 @@ FUNCTION TryWrite(time!)
 	END IF
 END FUNCTION
 
-FUNCTION CheckLever	'returns 1, 3 or lever.status * 2
+FUNCTION CheckLever	'returns 1, or 0 ot 3 in case we are not sure about the state
 	SHARED lever AS TLever, feeder AS TFeeder
 	SHARED time_since_start
-  
+	
+  	CheckLever = 3				'if it was 1, it turns to 2
+	
 	IF lever.address >= 0 THEN 'only if we actually have a lever
 		parallel_input = INP(lever.address) 											'INPUT from parallel port on designated address
 		lever.status = INT((paralel_input MOD 2 ^ lever.bit) / 2 ^ (lever.bit - 1))		'we turn paralel_input into I guess either 0 or 1
@@ -352,17 +356,11 @@ FUNCTION CheckLever	'returns 1, 3 or lever.status * 2
 		lever.last_time_changed = time_since_start
 	END IF
 	
-	CheckLever = lever.status * 2	'if it was 1, it turns to 2
 	'if the time since last change is bigger than sensitivity of the lever, we take a look on what the value is
 	
-	IF time_since_start - lever.last_time_changed >= lever.sensitivity THEN 	'if there was a lever press, and it was before the time we set for sensitivity
-		IF lever.status = 1 THEN 									'lever pressed?
-			lever.last_time_changed = -1
-			CheckLever = 3
-		ELSE
-			lever.last_time_changed = -1
-			CheckLever = 1
-		END IF
+	IF time_since_start - lever.last_time_changed >= lever.sensitivity THEN 	'if there was a lever press, and it was before the time we set for sensitivity												'lever pressed?
+		lever.last_time_changed = 0
+		CheckLever = lever.status
 	END IF
 	
 	lever.last_status = lever.status 'resets the status
@@ -370,25 +368,22 @@ FUNCTION CheckLever	'returns 1, 3 or lever.status * 2
 END FUNCTION
 
 FUNCTION CheckFeeder
-	SHARED feeder AS TFeeder, Cs() AS TCycle
+	SHARED feeder AS TFeeder
 	SHARED time_since_start
 
-	CheckFeeder = feeder.status * 2		'What is this?
+	CheckFeeder = 3						'What is this?
 	IF feeder.status < 0 THEN			'this happens in the activate feeder
-		'if we want to activate the feeder and the time of activation was set in the ActivateFeeder function
-		IF time_since_start >= feeder.last_time_activated THEN
+		IF time_since_start >= feeder.last_time_activated THEN	'if we want to activate the feeder and the time of activation was set in the ActivateFeeder function
 			Feeder.status = 1		'sets the status to activated
 			'actually turns on the feeder or BEEPS in case the parallel port does not exist
 			IF feeder.address >= 0 THEN OUT feeder.address, 2 ^ feeder.bit - 1 ELSE SOUND 1000, 2
-			CheckFeeder = 1
+			CheckFeeder = 1														'feeder on
 		END IF
 	'if we wanted to have the feeder activated, but it's already running for its duration, we turn it off
 	ELSEIF feeder.status = 1 AND time_since_start - feeder.last_time_activated > feeder.duration THEN
-		'this allows the feeder to be turned on
-		feeder.status = 0
-		'InitLever			'do I need it? don't think so
+		feeder.status = 0														'this allows the feeder to be turned on later
 		IF feeder.address >= 0 THEN OUT feeder.address, 0 ELSE SOUND 500, 2		'turns the feeder off
-		CheckFeeder = 3
+		CheckFeeder = 0															'feeder off
 	END IF
 END FUNCTION
 
@@ -405,30 +400,13 @@ END SUB
 SUB Write2File
 
   SHARED lever AS TLever, feeder AS TFeeder
-  SHARED t
+  SHARED time_since_start
 	
 	'WHAT do we want to write down?
-    PRINT #fid, USING fstr$; msg; t; tc; c + 1; h + 1; ct + 1;
-    PRINT #fid, USING fstr$; Cs(ct).sch(Cs(ct).k);
-    FOR j = LBOUND(Rs) TO UBOUND(Rs)
-      PRINT #fid, USING fstr$; Rs(j).x; Rs(j).y;
-    NEXT j
-    PRINT #fid,
-END SUB
-
-SUB Write2Screen
-  SHARED Lever AS TLever, Feeder AS TFeeder
-  SHARED Cs() AS TCycle, Rs() AS TRectangle, Nps()
-  SHARED t, tc, c, ct, h, fid, msg, fstr$, key$
-
-
-  LOCATE 1, 1
-  PRINT "t:"; INT(t / 100); INT(Lever.tRew / 100);
-  PRINT ", #p:"; Lever.n; Lever.nRew; "#pct:";
-  FOR k = LBOUND(Nps) TO UBOUND(Nps) - 1: PRINT Nps(k); : NEXT k
-  PRINT ", #rew:"; Nps(UBOUND(Nps));
-  'PRINT ", tc:"; FIX(tc / 100);
-  PRINT ", c:"; c + 1; ", h:"; h + 1; "msg:"; USING "######"; msg
-
-
+    'PRINT #fid, USING fstr$; msg; t; tc; c + 1; h + 1; ct + 1;
+    'PRINT #fid, USING fstr$; Cs(ct).sch(Cs(ct).k);
+    'FOR j = LBOUND(Rs) TO UBOUND(Rs)
+      'PRINT #fid, USING fstr$; Rs(j).x; Rs(j).y;
+    'NEXT j
+    'PRINT #fid,
 END SUB
