@@ -93,7 +93,7 @@ END IF
 '-----------------------------------
 '       BASIC INICIALIZATIONS
 '-----------------------------------
-
+select_computer:
 INPUT ; "Which computer are you runing the experiment on? (right, left, test): ", computer$
 SELECT CASE computer$
 	CASE "right"
@@ -112,8 +112,8 @@ SELECT CASE computer$
 		Feeder.address = -1
 		Feeder.bit = 0
 	CASE ELSE
-		PRINT ("You haven't selected any valid choice")
-		GOTO get_experiment_type
+		PRINT ("You havent selected any valid choice")
+		GOTO select_computer
 END SELECT
 
 
@@ -374,7 +374,7 @@ FUNCTION CheckFeeder
 	SHARED time_since_start
 
 	CheckFeeder = feeder.status * 2		'What is this?
-	IF feeder.status <= 0 THEN			'this happens in the activate feeder
+	IF feeder.status < 0 THEN			'this happens in the activate feeder
 		'if we want to activate the feeder and the time of activation was set in the ActivateFeeder function
 		IF time_since_start >= feeder.last_time_activated THEN
 			Feeder.status = 1		'sets the status to activated
