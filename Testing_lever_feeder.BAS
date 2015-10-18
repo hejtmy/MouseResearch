@@ -102,43 +102,43 @@ DO
 	time_since_start = GetTime
     key$ = INKEY$
 	if CheckLever = 3 THEN ActivateFeeder
-	CheckFeeder
+	s% = CheckFeeder
 LOOP UNTIL key$ = CHR$(27)
 '----------------------------------------------------------------------------
 '       FUNCTIONS
 '----------------------------------------------------------------------------
 FUNCTION GetTime
-GetTime = TIMER(.01)
+	GetTime = TIMER(.01)
 END FUNCTION
 
 FUNCTION CheckLever 'returns 1, 3 or lever.status * 2
-SHARED lever AS TLever, feeder AS TFeeder
-SHARED time_since_start
+	SHARED lever AS TLever, feeder AS TFeeder
+	SHARED time_since_start
 
-IF lever.address >= 0 THEN 'only if we actually have a lever
-    parallel_input = INP(lever.address) 											'INPUT from parallel port on designated address
-    lever.status = INT((paralel_input MOD 2 ^ lever.bit) / 2 ^ (lever.bit - 1)) 	'we turn paralel_input into I guess either 0 or 1
-END IF
+	IF lever.address >= 0 THEN 'only if we actually have a lever
+		parallel_input = INP(lever.address) 											'INPUT from parallel port on designated address
+		lever.status = INT((paralel_input MOD 2 ^ lever.bit) / 2 ^ (lever.bit - 1)) 	'we turn paralel_input into I guess either 0 or 1
+	END IF
 
-IF lever.last_status <> lever.status THEN 'if the new status is different from the old one
-    'lever was released or pressed including bouncing
-    lever.last_time_changed = time_since_start
-END IF
+	IF lever.last_status <> lever.status THEN 'if the new status is different from the old one
+		'lever was released or pressed including bouncing
+		lever.last_time_changed = time_since_start
+	END IF
 
-CheckLever = lever.status * 2 'if it was 1, it turns to 2
-'if the time since last change is bigger than sensitivity of the lever, we take a look on what the value is
+	CheckLever = lever.status * 2 'if it was 1, it turns to 2
+	'if the time since last change is bigger than sensitivity of the lever, we take a look on what the value is
 
-IF time_since_start - lever.last_time_changed >= lever.sensitivity THEN 'if there was a lever press, and it was before the time we set for sensitivity
-    IF lever.status = 1 THEN 'lever pressed?
-        lever.last_time_changed = -1
-        CheckLever = 3
-    ELSE
-        lever.last_time_changed = -1
-        CheckLever = 1
-    END IF
-END IF
+	IF time_since_start - lever.last_time_changed >= lever.sensitivity THEN 'if there was a lever press, and it was before the time we set for sensitivity
+		IF lever.status = 1 THEN 'lever pressed?
+			lever.last_time_changed = -1
+			CheckLever = 3
+		ELSE
+			lever.last_time_changed = -1
+			CheckLever = 1
+		END IF
+	END IF
 
-lever.last_status = lever.status 'resets the status
+	lever.last_status = lever.status 'resets the status
 
 END FUNCTION
 

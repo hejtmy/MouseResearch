@@ -136,7 +136,6 @@ FUNCTION CheckLever	'returns 1 =lever pressed for sure, or 0 lever surely untouc
 	END IF
 	
 	'if the time since last change is bigger than sensitivity of the lever, we take a look on what the value is
-	
 	IF time_since_start - lever.last_time_changed >= lever.sensitivity THEN 	'if there was a lever press, and it was before the time we set for sensitivity
 		lever.last_time_changed = 0
 		CheckLever = lever.status
