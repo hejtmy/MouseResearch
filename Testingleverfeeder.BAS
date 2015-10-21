@@ -108,16 +108,15 @@ LOOP UNTIL key$ = CHR$(27)
 '       FUNCTIONS
 '----------------------------------------------------------------------------
 FUNCTION GetTime
-	GetTime! = TIMER(.01)
+	GetTime! = TIMER 
 END FUNCTION
 
-FUNCTION CheckLever 'returns 1, 3 or lever.status * 2
+FUNCTION CheckLever 			'returns 1, 3 or lever.status * 2
 	SHARED lever AS TLever, feeder AS TFeeder
 	SHARED timesincestart AS SINGLE
 
 	IF lever.address >= 0 THEN 'only if we actually have a lever
-		parallelinput = INP(lever.address) 											'INPUT from parallel port on designated address
-		lever.status = INT((paralelinput MOD 2 ^ lever.bit) / 2 ^ (lever.bit - 1)) 	'we turn paralelinput into I guess either 0 or 1
+		lever.status = INP(lever.address) 				'INPUT from parallel port on designated address - right computer gets 3 on pressed and 2 on left alone
 	END IF
 
 	IF lever.laststatus <> lever.status THEN 'if the new status is different from the old one
@@ -125,7 +124,7 @@ FUNCTION CheckLever 'returns 1, 3 or lever.status * 2
 		lever.lasttimechanged = timesincestart
 	END IF
 
-	CheckLever = lever.status * 2 'if it was 1, it turns to 2
+	CheckLever = 3 'if it was 1, it turns to 2
 	'if the time since last change is bigger than sensitivity of the lever, we take a look on what the value is
 
 	IF timesincestart - lever.lasttimechanged >= lever.sensitivity THEN 'if there was a lever press, and it was before the time we set for sensitivity
@@ -134,7 +133,7 @@ FUNCTION CheckLever 'returns 1, 3 or lever.status * 2
 			CheckLever = 3
 		ELSE
 			lever.lasttimechanged = -1
-			CheckLever = 1
+			CheckLever = 0
 		END IF
 	END IF
 
