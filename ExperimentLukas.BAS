@@ -21,13 +21,12 @@ OPTION BASE 1
 '       Define user types
 '----------------------------------------------------------------------------
 TYPE TExperiment
-    type AS STRING * 10 'sets the type of the experiment to DRL, BASIC ...
-    reward AS STRING * 10 'sets the reward scenario to NTH, EACH ...
+    exp_type AS INTEGER 'sets the type of the experiment to DRL, BASIC ...
+    reward AS INTEGER 'sets the reward scenario to NTH, EACH ...
     rewardduration AS SINGLE '
     rewardnumber AS INTEGER 'number to define either nth reward or time during which
     intertrialtime AS SINGLE
 END TYPE
-
 
 TYPE TLever
   status AS INTEGER				'lever status
@@ -121,12 +120,12 @@ END SELECT
 PRINT ""
 'get the experiment type
 getexperimenttype:
-INPUT ; "Please enter experiment type (basic, drl): ", etype$
-SELECT CASE etype$
+INPUT ; "Please enter experiment type (basic, drl): ", etype_inp$
+SELECT CASE etype_inp$
 	CASE "drl"
-		experiment.type = "DRL"
+		etype$ = "DRL"
 	CASE "basic"
-		 experiment.type = "BASIC"
+		etype$ = "BASIC"
 	CASE ELSE
 		PRINT ("You haven't selected any valid choice")
 		GOTO getexperimenttype
@@ -141,14 +140,14 @@ INPUT "How long should the experiment cycle cycle last in seconds?: ", cdur! 			
 'INPUT the reward type
 getrewardtype:
 PRINT ""
-INPUT ; "Please enter reward type (each, nth, first): ", rtype$
-SELECT CASE rtype$
+INPUT ; "Please enter reward type (each, nth, first): ", rtype_inp$
+SELECT CASE rtype_inp$
 	CASE "first"
-		experiment.reward = "FIRST"
+		rtype$ = "FIRST"
 	CASE "each"
-		experiment.reward = "EACH"
+		rtype$ = "EACH"
 	CASE "nth"
-		experiment.reward = "NTH"
+		rtype$ = "NTH"
 	CASE ELSE
 		PRINT ("You haven't selected any valid choice")
 		GOTO getrewardtype
@@ -164,9 +163,6 @@ PRINT ""
 'getrewardduration
 INPUT "How long should the reward cycle last?: ", rdur! 			'THIS IS NOT VALIDATED! TODO
 experiment.rewardduration = rdur!
-
-
-
 
 writeinterval = 2
 '----------------------------------------------------------------------------
