@@ -205,7 +205,7 @@ FOR icycle = 1 TO numcycles% STEP 1
 	WHILE loopstarttime! + cdur! >= GetTime
 	timesincestart = GetTime
 		'plays the experimental scenario based on the input values
-		SELECT CASE experiment.type
+		SELECT CASE etype$
 			'---
 			'checks for lever press during the cycle if the experiment is evil
 			'---
@@ -222,12 +222,14 @@ FOR icycle = 1 TO numcycles% STEP 1
 	'	REWARD PHASE
 	'---
 	Print "reward phase started"
-	SELECT CASE experiment.reward
+	SELECT CASE rtype$
 		CASE "EACH"
 			RewardEachLever
 		CASE "NTH"
 			RewardEachNthLever(experiment.rewardnumber)
 		CASE "TIME"
+		
+		CASE 
 	END SELECT
 	Print "inter trial started"
 	WaitForTime(intertrialtime)	'problem - mouse doesn't know it stopped being rewarded - how to distinguis inter trial and reward phase?
