@@ -14,7 +14,7 @@ DECLARE SUB RewardEachLever()
 DECLARE SUB RewardEachNthLever(nth%)
 
 DECLARE SUB TryWrite(lasttime as SINGLE)
-DECLARE SUB FillCycles(ncycles%,cdur!)
+DECLARE SUB FillCycles(ncycles%,cdur)
 
 OPTION BASE 1
 '----------------------------------------------------------------------------
@@ -56,6 +56,11 @@ DIM currentcycle as TCycle
 DIM writeinterval as SINGLE	'how often do we want to log stuff
 DIM numcycles as INTEGER		'number of cycles in the experimental session
 DIM fstr$       				'output file format string
+DIM etype AS STRING
+DIM cdur AS SINGLE
+DIM rtype AS STRING
+DIM rdur AS SINGLE
+DIM rnum AS INTEGER
 
 '----------------------------------------------------------------------------
 '       Open output file
@@ -123,9 +128,9 @@ getexperimenttype:
 INPUT ; "Please enter experiment type (basic, drl): ", etype_inp$
 SELECT CASE etype_inp$
 	CASE "drl"
-		etype$ = "DRL"
+		etype = "DRL"
 	CASE "basic"
-		etype$ = "BASIC"
+		etype = "BASIC"
 	CASE ELSE
 		PRINT ("You haven't selected any valid choice")
 		GOTO getexperimenttype
@@ -135,7 +140,8 @@ PRINT ""
 INPUT "How many cycles should there be in an experiment?: ", numcycles% 			'THIS IS NOT VALIDATED! TODO
 PRINT ""
 'getexperimentduration
-INPUT "How long should the experiment cycle cycle last in seconds?: ", cdur! 			'THIS IS NOT VALIDATED! TODO
+INPUT "How long should the experiment cycle cycle last in seconds?: ", inp_cdur! 			'THIS IS NOT VALIDATED! TODO
+cdur = imp_cdur!
 
 'INPUT the reward type
 getrewardtype:
@@ -143,11 +149,11 @@ PRINT ""
 INPUT ; "Please enter reward type (each, nth, first): ", rtype_inp$
 SELECT CASE rtype_inp$
 	CASE "first"
-		rtype$ = "FIRST"
+		rtype = "FIRST"
 	CASE "each"
-		rtype$ = "EACH"
+		rtype = "EACH"
 	CASE "nth"
-		rtype$ = "NTH"
+		rtype = "NTH"
 	CASE ELSE
 		PRINT ("You haven't selected any valid choice")
 		GOTO getrewardtype
@@ -156,13 +162,16 @@ END SELECT
 'get the reward number (seconds for 
 IF experiment.reward = "NTH" THEN
 	PRINT ""
-	INPUT "You selected each nth lever press would bring reward. Please enter how often should that be (2,3,5 etc.): ", rnum% 			'THIS IS NOT VALIDATED! TODO
-	experiment.rewardnumber = rnum%
+	INPUT "You selected each nth lever press would bring reward. Please enter how often should that be (2,3,5 etc.): ", inp_rnum% 			'THIS IS NOT VALIDATED! TODO
+	experiment.rewardnumber = inp_rnum%
+	rnum = inp_rnum%
 END IF
 PRINT ""
+
 'getrewardduration
-INPUT "How long should the reward cycle last?: ", rdur! 			'THIS IS NOT VALIDATED! TODO
-experiment.rewardduration = rdur!
+INPUT "How long should the reward cycle last?: ", imp_rdur!	'THIS IS NOT VALIDATED! TODO
+experiment.rewardduration = imp_rdur!
+rdur = imp_rdur!
 
 writeinterval = 2
 '----------------------------------------------------------------------------
@@ -198,10 +207,10 @@ FOR icycle = 1 TO numcycles% STEP 1
 	loopstarttime! = GetTime 			'SINGLE, should be enough
 	lasttimewrite! = loopstarttime!	'gets the last time a log has been made
 	Print "cycle started"
-	WHILE loopstarttime! + cdur! >= GetTime
+	WHILE loopstarttime! + cdur >= GetTime
 	timesincestart = GetTime
 		'plays the experimental scenario based on the input values
-		SELECT CASE etype$
+		SELECT CASE etype
 			'---
 			'checks for lever press during the cycle if the experiment is evil
 			'---
@@ -218,14 +227,15 @@ FOR icycle = 1 TO numcycles% STEP 1
 	'	REWARD PHASE
 	'---
 	Print "reward phase started"
-	SELECT CASE rtype$
+	SELECT CASE rtype
 		CASE "EACH"
 			RewardEachLever
 		CASE "NTH"
-			RewardEachNthLever(experiment.rewardnumber)
+			RewardEachNthLever(rnum)
 		CASE "TIME"
-		
-		CASE 
+			print "TIME"
+		CASE ELSE
+			PRINT "ELSE"
 	END SELECT
 	Print "inter trial started"
 	WaitForTime(intertrialtime)	'problem - mouse doesn't know it stopped being rewarded - how to distinguis inter trial and reward phase?
@@ -262,6 +272,7 @@ SUB RewardEachLever()
 END SUB
 
 SUB RewardFirst()
+	SHARED rdur
 	SHARED lever
 	SHARED experiment
 	'---
@@ -269,7 +280,7 @@ SUB RewardFirst()
 	'---
 	loopstarttime! = GetTime
 	feederactivated% = 0
-	WHILE loopstarttime! + experiment.rewardduration >= GetTime AND feederactivated = 0	'the mouse has only specified time to press the lever
+	WHILE loopstarttime! + rdur >= GetTime AND feederactivated = 0	'the mouse has only specified time to press the lever
 		leverstatus% = CheckLever
 		'need to log it in the script
 		IF leverstatus% = 1 THEN 
@@ -287,7 +298,7 @@ SUB RewardEachNthLever(nth%)
 	'---
 	numberofpresses% = 0
 	loopstarttime! = GetTime
-	WHILE loopstarttime! + experiment.rewardduration >= GetTime
+	WHILE loopstarttime! + rew >= GetTime
 		leverstatus% = CheckLever
 		'need to log it in the script
 		IF leverstatus% = 1 THEN numberofpresses% = numberofpresses% + 1
