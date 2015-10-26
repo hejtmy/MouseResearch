@@ -137,7 +137,8 @@ SELECT CASE etype_inp$
 END SELECT
 PRINT ""
 'getexperimentcycles
-INPUT "How many cycles should there be in an experiment?: ", numcycles% 			'THIS IS NOT VALIDATED! TODO
+INPUT "How many cycles should there be in an experiment?: ", inp_numcycles% 			'THIS IS NOT VALIDATED! TODO
+numcycles = inp_numcycles%
 PRINT ""
 'getexperimentduration
 INPUT "How long should the experiment cycle cycle last in seconds?: ", inp_cdur! 			'THIS IS NOT VALIDATED! TODO
@@ -191,7 +192,7 @@ lever.sensitivity = 0.01
 
 timesincestart = GetTime								'START OF THE EXPERIMENT
 
-FOR icycle = 1 TO numcycles% STEP 1					
+FOR icycle = 1 TO numcycles STEP 1					
 	startmaincycle:									'goto point
 	'---
 	'In the designated loop time
@@ -272,9 +273,9 @@ SUB RewardEachLever()
 END SUB
 
 SUB RewardFirst()
-	SHARED rdur
-	SHARED lever
-	SHARED experiment
+	SHARED rdur as SINGLE
+	SHARED lever as TLever
+	SHARED experiment as TExperiment
 	'---
 	'checks for lever press during the cycle if the experiment is evil
 	'---
@@ -291,17 +292,20 @@ SUB RewardFirst()
 END SUB
 
 SUB RewardEachNthLever(nth%)
-	SHARED lever
-	SHARED experiment
+	SHARED lever AS TLever
+	SHARED experiment	AS TExperiment
+	SHARED rdur AS SINGLE
 	'---
 	'checks for lever press during the cycle if the experiment is evil
 	'---
 	numberofpresses% = 0
 	loopstarttime! = GetTime
-	WHILE loopstarttime! + rew >= GetTime
+	WHILE loopstarttime! + rdur >= GetTime
 		leverstatus% = CheckLever
 		'need to log it in the script
-		IF leverstatus% = 1 THEN numberofpresses% = numberofpresses% + 1
+		IF leverstatus% = 1 THEN 
+			numberofpresses% = numberofpresses% + 1
+		END IF
 		if numberofpresses% MOD nth% THEN ActivateFeeder
 	WEND
 END SUB
@@ -382,7 +386,7 @@ ELSEIF feeder.status = 1 AND timesincestart - feeder.lasttimeactivated > feeder.
     feeder.status = 0
     'InitLever          'do I need it? don't think so
     IF feeder.address >= 0 THEN OUT feeder.address, 0 ELSE SOUND 500, 2 'turns the feeder off
-    CheckFeeder = 3
+    CheckFeeder = 0
 END IF
 END FUNCTION
 
