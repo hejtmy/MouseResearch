@@ -206,7 +206,7 @@ getrewardtype:
 	timesincestart = GetTime                                                                'START OF THE EXPERIMENT
 
 	FOR icycle = 1 TO numcycles STEP 1
-startmaincycle:                                                                                 'goto point
+	startmaincycle:                                                                                 'goto point
 		'---
 		'In the designated loop time
 		'---
@@ -229,10 +229,8 @@ startmaincycle:                                                                 
 				'checks for lever press during the cycle if the experiment is evil
 				'---
 				CASE "DRL"
-					leverstatus% = CheckLever
-					PRINT CheckLever
-					'Write that the mouse pressed the lever
-					IF leverstatus% = 1 THEN GOTO startmaincycle    'the evil step
+					drl% = DoDRLExperiment
+					if drl% = 0 THEN GOTO startmaincycle
 				CASE "BASIC"
 					lasttimewrite! = TryWrite(lasttimewrite!)
 				CASE ELSE
@@ -261,7 +259,7 @@ endmaincycle:                                                   'goto point
 	'needs to turn off the feeder
 
 	CLOSE #fid
-	OUT feeder.address, 0
+	if feeder.address >0 THEN OUT feeder.address, 0
 
 
 	PRINT "EXPERIMENT FINISHED, PLEASE PRESS A KEY"
@@ -271,6 +269,26 @@ endmaincycle:                                                   'goto point
 	'----------------------------------------------------------------------------
 
 	'----------------------------------------------------------------------------
+	'       EXPERIMENT SUBROUTINES
+	'----------------------------------------------------------------------------
+	FUNCTION DoDRLExperiment()
+	SHARED cdur AS SINGLE
+	SHARED lever as TLever
+	SHARED timesincestart as SINGLE
+	loopstarttime! = GetTime
+	DoDRLExperiment = 1		'we set the default return to 1
+	WHILE loopstarttime! + cdur >= GetTime AND exit% = 0 
+		timesincestart = GetTime
+		leverstatus% = CheckLever
+		PRINT CheckLever
+		'Write that the mouse pressed the lever
+		IF leverstatus% = 1 THEN 
+			DoDRLExperiment = 0 'the evil step, we return 0, meaning the step ended prematurely
+			exit% = 1
+		END IF
+	WEND
+	END SUB
+	'----------------------------------------------------------------------------
 	'       REWARD SUBROUTINES
 	'----------------------------------------------------------------------------
 
@@ -278,6 +296,10 @@ endmaincycle:                                                   'goto point
 	'       HELPER SUBROUTINES
 	'----------------------------------------------------------------------------
 
+	
+	'----------------------------------------------------------------------------
+	'       CONNECTION SUBROUTINES
+	'----------------------------------------------------------------------------
 	SUB ActivateFeeder 'only changes the status, CheckFeeder actually turns it on
 	SHARED feeder AS TFeeder
 	SHARED timesincestart AS SINGLE
@@ -404,7 +426,7 @@ endmaincycle:                                                   'goto point
 		WHILE loopstarttime! + rdur >= GetTime AND feederactivated = 0  'the mouse has only specified time to press the lever
 			leverstatus% = CheckLever
 			'need to log it in the script
-			IF leverstatus% = 1 THEN
+			IF leverstatus% = 1 AND feederactivated% = 0 THEN
 				ActivateFeeder
 				feederactivated = 1
 			END IF
