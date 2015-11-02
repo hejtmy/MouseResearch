@@ -203,6 +203,7 @@ feeder.duration = 1
 '----------------------------------------------------------------------------
 
 timesincestart = GetTime 'START OF THE EXPERIMENT
+WriteHeader
 WriteEvent("ExperimentStarted")
 FOR icycle = 1 TO numcycles STEP 1
     startmaincycle: 'goto point
@@ -223,7 +224,7 @@ FOR icycle = 1 TO numcycles STEP 1
     '-----------------------
     'gets the last time a log has been made
     WriteTestPhaseStarted
-
+	phase = "TEST"
     'plays the experimental scenario based on the input values
     SELECT CASE etype
         CASE "DRL"
@@ -240,6 +241,7 @@ FOR icycle = 1 TO numcycles STEP 1
     '       REWARD PHASE
     '--------------------------
     WriteRewardPhaseStarted
+	phase = "REWARD"
     SELECT CASE rtype
         CASE "EACH"
             RewardEachLever
@@ -360,7 +362,7 @@ END SUB
 SUB WaitForTime (t!) 'basically does nothing, just waits
 starttime! = GetTime
 WHILE starttime! + t! >= GetTime
-    'waiting
+    TryWrite
 WEND
 CLOSE
 END SUB
@@ -457,6 +459,7 @@ END IF
 END FUNCTION
 
 SUB WriteHeader
+SHARED fid  
 PRINT #fid, "HEADER"
 PRINT #fid, "Name of the experiment"
 PRINT #fid, "Computer"
@@ -470,32 +473,35 @@ PRINT #fid, "*********"
 END SUB
 
 SUB WriteEvent (event$)
+SHARED fid  
 PRINT #fid, "---"
 PRINT #fid, event$, ";", GetTime
 PRINT #fid, "---"
 END SUB
 
 SUB WriteTestPhaseEnded
-WriteEvent ("WriteTestPhaseEnded")
+WriteEvent("WriteTestPhaseEnded")
 END SUB
 SUB WriteRewardPhaseEnded
-WriteEvent ("WriteRewardPhaseEnded")
+WriteEvent("WriteRewardPhaseEnded")
 END SUB
 SUB WriteTestPhaseStarted
-WriteEvent ("WriteTestPhaseStarted")
+WriteEvent("WriteTestPhaseStarted")
 END SUB
 SUB WriteRewardPhaseStarted
-WriteEvent ("WriteRewardPhaseStarted")
+WriteEvent("WriteRewardPhaseStarted")
 END SUB
 
 SUB Write2File
+SHARED fid  
 SHARED lever AS TLever, feeder AS TFeeder
 SHARED timesincestart AS SINGLE
 SHARED icycle AS INTEGER
 timesincestart = GetTime
 'WHAT do we want to write down?
 'TIME, CYCLE NUMBER, PHASE, LEVER STATUS, FEEDER STATUS
-PRINT #fid, USING fstr$; timesincestart; icycle, phase; CheckLever; CheckFeeder
+'PRINT #fid, USING fstr$; timesincestart; icycle, phase; CheckLever; CheckFeeder
+Print #fid, timesincestart
 END SUB
 
 SUB Write2Screen
