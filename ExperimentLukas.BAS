@@ -42,12 +42,12 @@ TYPE TLever
 END TYPE
 
 TYPE TFeeder
-    duration AS SINGLE 'duration (10msec) of feeder activation
-    delay AS SINGLE 'activation delay (10msec)
-    lasttimeactivated AS SINGLE 'time (10msec) of the last activation
-    status AS INTEGER '0..no activated, -1 or 1..activated
-    address AS LONG 'parallel port address
-    bit AS LONG 'which bit on the port is used:
+    duration AS SINGLE 			'duration (10msec) of feeder activation
+    delay AS SINGLE 			'activation delay (10msec)
+    activatetime AS SINGLE 		'time (10msec) of the last activation
+    status AS INTEGER 			'0..no activated, -1 or 1..activated
+    address AS LONG 			'parallel port address
+    bit AS LONG 				'which bit on the port is used:
 END TYPE
 '----------------------------------------------------------------------------
 '       DECLARE VARIABLES
@@ -203,7 +203,7 @@ feeder.duration = 1
 '----------------------------------------------------------------------------
 
 timesincestart = GetTime 'START OF THE EXPERIMENT
-
+WriteEvent("ExperimentStarted")
 FOR icycle = 1 TO numcycles STEP 1
     startmaincycle: 'goto point
     '---
@@ -213,11 +213,11 @@ FOR icycle = 1 TO numcycles STEP 1
     '----------------------------
     '       WriteLoopStarted
     '----------------------------
-    WriteEvent ("ExperimentStarted")
+
     '-----------------------
     '       SIGNAL
     '-----------------------
-
+	SOUND 1000, 2
     '-----------------------
     '       TEST PHASE
     '-----------------------
@@ -276,13 +276,12 @@ SHARED timesincestart AS SINGLE
 exiting% = 0
 loopstarttime! = GetTime
 DoDRLExperiment = 1 'we set the default return to 1
-WHILE loopstarttime! + cdur >= GetTime AND exiting% = 0
+WHILE loopstarttime! + cdur >= GetTime AND DoDRLExperiment = 1
     timesincestart = GetTime
     leverstatus% = CheckLever
     IF leverstatus% = 1 THEN
-        'Write that the mouse pressed the lever
+        'Write that the mouse pressed the lever - should be in the TryWriteFunction
         DoDRLExperiment = 0 'the evil step, we return 0, meaning the step ended prematurely
-        exiting% = 1
     END IF
     TryWrite
 WEND
@@ -295,11 +294,11 @@ SHARED timesincestart AS SINGLE
 loopstarttime! = GetTime
 'we set the default return to 1
 WHILE loopstarttime! + cdur >= GetTime
-    timesincestart = GetTime
-    leverstatus% = CheckLever
+    timesincestart = GetTime	'potentially redundant - happens in trywrite
+    leverstatus% = CheckLever	'potentially redundant - happens in trywrite
     'Write that the mouse pressed the lever
     IF leverstatus% = 1 THEN
-        'Write it down
+		'should be in the trywrite - all of this is redundant
     END IF
     TryWrite
 WEND
@@ -332,7 +331,6 @@ WHILE loopstarttime! + rdur >= GetTime
     END IF
     IF numberofpresses% > 0 AND (numberofpresses% MOD nth%) = 0 THEN
         ActivateFeeder
-        activated% = 1
     END IF
     TryWrite
 WEND
@@ -341,7 +339,7 @@ END SUB
 SUB RewardFirst
 SHARED rdur AS SINGLE
 loopstarttime! = GetTime
-feederactivated% = 0
+feederactivated% = 0	'if the feeder has alrady been activated once
 rewarddone% = 0
 WHILE loopstarttime! + rdur >= GetTime AND rewarddone% = 0 'the mouse has only specified time to press the lever
     timesincestart = GetTime
@@ -374,7 +372,7 @@ SHARED feeder AS TFeeder
 SHARED timesincestart AS SINGLE
 'if the feeder is not running, we can turn it on
 IF feeder.status = 0 THEN
-    feeder.lasttimeactivated = timesincestart + feeder.delay
+    feeder.activatetime = timesincestart + feeder.delay
     feeder.status = -1
 END IF
 END SUB
@@ -383,17 +381,17 @@ FUNCTION CheckFeeder
 SHARED feeder AS TFeeder
 SHARED timesincestart AS SINGLE
 
-CheckFeeder = feeder.status * 2 'What is this?
-IF feeder.status < 0 THEN 'this happens in the activate feeder
+CheckFeeder = feeder.status
+IF feeder.status < 0 THEN 	'this happens in the activate feeder
     'if we want to activate the feeder and the time of activation was set in the ActivateFeeder function
-    IF timesincestart >= feeder.lasttimeactivated THEN
+    IF timesincestart >= feeder.activatetime THEN
         feeder.status = 1 'sets the status to activated
         'actually turns on the feeder or BEEPS in case the parallel port does not exist
         IF feeder.address >= 0 THEN OUT feeder.address, 2 ^ feeder.bit - 1 ELSE SOUND 1000, 2
         CheckFeeder = 1
     END IF
     'if we wanted to have the feeder activated, but it's already running for its duration, we turn it off
-ELSEIF feeder.status = 1 AND timesincestart - feeder.lasttimeactivated > feeder.duration THEN
+ELSEIF feeder.status = 1 AND timesincestart - feeder.activatetime > feeder.duration THEN
     'this allows the feeder to be turned on
     feeder.status = 0
     'InitLever          'do I need it? don't think so
@@ -447,7 +445,6 @@ ELSE
 END IF
 END FUNCTION
 
-
 '----------------------------------------------------------------------------
 '       WRITE FUNCTIONS
 '----------------------------------------------------------------------------
@@ -455,11 +452,12 @@ SUB TryWrite
 STATIC lasttimewrite!
 IF GetTime - lasttimewrite! > writeinterval THEN 'if the time from the last log is larger than the logging frequency
     Write2File 'we write the log
-    lasttimewrite! = GetTime 'and send the the time of the log to the SUBROUTINE, so that it knows when it was made                                                                                        'otherwise we send the time back
+    lasttimewrite! = GetTime 'and send the the time of the log to the SUBROUTINE, so that it knows when it was made
 END IF
 END FUNCTION
 
 SUB WriteHeader
+PRINT #fid, "HEADER"
 PRINT #fid, "Name of the experiment"
 PRINT #fid, "Computer"
 PRINT #fid, "Experiment type: ", etype 'Type of experiment
@@ -468,11 +466,13 @@ PRINT #fid, "Duration of each test cycle: ", cdur 'length of each
 PRINT #fid, "Reward type: ", rtype
 PRINT #fid, "Duration of reward cycle: ", rdur
 PRINT #fid, "Inter trial time: ", intertrialtime
-PRINT #fid, "----------"
+PRINT #fid, "*********"
 END SUB
 
 SUB WriteEvent (event$)
+PRINT #fid, "---"
 PRINT #fid, event$, ";", GetTime
+PRINT #fid, "---"
 END SUB
 
 SUB WriteTestPhaseEnded
@@ -496,8 +496,6 @@ timesincestart = GetTime
 'WHAT do we want to write down?
 'TIME, CYCLE NUMBER, PHASE, LEVER STATUS, FEEDER STATUS
 PRINT #fid, USING fstr$; timesincestart; icycle, phase; CheckLever; CheckFeeder
-'PRINT #fid, USING fstr$; Cs(ct).sch(Cs(ct).k);
-'PRINT #fid,
 END SUB
 
 SUB Write2Screen
