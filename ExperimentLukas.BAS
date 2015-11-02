@@ -67,6 +67,7 @@ DIM rdur AS SINGLE
 DIM rnum AS INTEGER
 DIM intertrialtime AS SINGLE
 DIM phase AS STRING
+DIM icycle AS INTEGER
 
 '----------------------------------------------------------------------------
 '       Open output file
@@ -257,7 +258,7 @@ startmaincycle:                                                                 
 	END SELECT
 	phase = "INTERTRIAL"
 	WaitForTime (intertrialtime)    'problem - mouse doesn't know it stopped being rewarded - how to distinguis inter trial and reward phase?
-endmaincycle:                                                   'goto point
+endmaincycle:                       'goto point
 NEXT icycle
 
 'needs to turn off the feeder
@@ -377,6 +378,7 @@ SUB RewardEachNthLever (nth%)
 	WHILE loopstarttime! + rdur >= GetTime
 		timesincestart = GetTime
 		leverstatus% = CheckLever
+		feederstatus% = CheckFeeder
 		'need to log it in the script
 		IF leverstatus% = 1 AND previouslever% = 0 THEN 	'if the new lever follows the no lever pressed, we increment the number of presses
 			numberofpresses% = numberofpresses% + 1
@@ -389,7 +391,6 @@ SUB RewardEachNthLever (nth%)
 			ActivateFeeder
 			activated% = 1
 		END IF
-		f% = CheckFeeder
 		IF leverstatus% = 0 THEN previouslever% = 0
 	WEND
 END SUB
@@ -433,32 +434,15 @@ SUB WaitForTime (t!) 'basically does nothing, just waits
 END SUB
 
 SUB Write2File
-
-  SHARED lever AS TLever, feeder AS TFeeder
-  SHARED timesincestart AS SINGLE
+	SHARED lever AS TLever, feeder AS TFeeder
+	SHARED timesincestart AS SINGLE
+	SHARED icycle AS INTEGER
 	PRINT "Info Written"
 	'WHAT do we want to write down?
-	'TIME, PHASE, PHASE TIME, LEVER STATUS, FEEDER STATUS
-	PRINT #fid, USING fstr$; timesincestart; tc; c + 1; h + 1; ct + 1;
+	'TIME, CYCLE NUMBER, PHASE, LEVER STATUS, FEEDER STATUS
+	PRINT #fid, USING fstr$; timesincestart; icycle, phase; CheckLever; CheckFeeder
 	'PRINT #fid, USING fstr$; Cs(ct).sch(Cs(ct).k);
 	'PRINT #fid,
-END SUB
-
-
-SUB Write2File
-
-SHARED Lever AS TLever, Feeder AS TFeeder
-SHARED Cs() AS TCycle, Rs() AS TRectangle
-SHARED t, tc, c, ct, h, fid, msg, fstr$, key$
-pom = msg >= 1000
-IF pom THEN
-	PRINT #fid, USING fstr$; msg; t; tc; c + 1; h + 1; ct + 1;
-	PRINT #fid, USING fstr$; Cs(ct).sch(Cs(ct).k);
-	FOR j = LBOUND(Rs) TO UBOUND(Rs)
-	  PRINT #fid, USING fstr$; Rs(j).x; Rs(j).y;
-	NEXT j
-	PRINT #fid,
-	END IF
 END SUB
 
 SUB Write2Screen
@@ -477,4 +461,3 @@ SUB Write2Screen
 
 
 END SUB
-
