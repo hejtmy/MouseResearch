@@ -17,7 +17,7 @@ DECLARE SUB DoBasicExperiment
 DECLARE SUB RewardEachLever
 DECLARE SUB RewardEachNthLever (nth%)
 
-DECLARE FUNCTION TryWrite (lasttime AS SINGLE)
+DECLARE SUB TryWrite
 DECLARE SUB FillCycles (ncycles%, cdur)
 
 OPTION BASE 1
@@ -222,30 +222,28 @@ startmaincycle:                                                                 
 	'       SIGNAL
 	'---
 	
-<<<<<<< HEAD
 	'---
 	'       TEST PHASE
 	'---
 	'gets the last time a log has been made
-	PRINT "cycle started"
+	WriteTestPhaseStarted
 	
 	'plays the experimental scenario based on the input values
 	SELECT CASE etype
 		CASE "DRL"
 			drl% = DoDRLExperiment
-			lasttimewrite! = TryWrite(lasttimewrite!)
 			'Write loop ended
 			if drl% = 0 THEN GOTO startmaincycle
 		CASE "BASIC"
 			DoBasicExperimentExperiment
 			'Write loop ended
-			lasttimewrite! = TryWrite(lasttimewrite!)
 		CASE ELSE
 	END SELECT
+	WriteTestPhaseEnded
 	'-------------------
 	'       REWARD PHASE
 	'-------------------
-	PRINT "reward phase started"
+	WriteRewardPhaseStarted
 	SELECT CASE rtype
 		CASE "EACH"
 			RewardEachLever
@@ -258,18 +256,14 @@ startmaincycle:                                                                 
 		CASE ELSE
 			PRINT "ELSE"
 	END SELECT
+	WriteRewardPhaseEnded
 	phase = "INTERTRIAL"
 	WaitForTime (intertrialtime)    'problem - mouse doesn't know it stopped being rewarded - how to distinguis inter trial and reward phase?
 	endmaincycle:                      'goto point
 NEXT icycle
 
-'needs to turn off the feeder
-
 CLOSE #fid
-<<<<<<< HEAD
-
 if feeder.address >0 THEN OUT feeder.address, 0	'turns off the feeder
-
 PRINT "EXPERIMENT FINISHED, PLEASE PRESS A KEY"
 
 '----------------------------------------------------------------------------
@@ -284,7 +278,7 @@ FUNCTION DoDRLExperiment()
 	SHARED lever as TLever
 	SHARED timesincestart as SINGLE
 	loopstarttime! = GetTime
-	DoDRLExperiment = 1		'we set the default return to 1
+	DoDRLExperiment = 1			'we set the default return to 1
 	WHILE loopstarttime! + cdur >= GetTime AND exit% = 0 
 		timesincestart = GetTime
 		leverstatus% = CheckLever
@@ -293,6 +287,7 @@ FUNCTION DoDRLExperiment()
 			DoDRLExperiment = 0 'the evil step, we return 0, meaning the step ended prematurely
 			exit% = 1
 		END IF
+	TryWrite
 	WEND
 END FUNCTION
 
@@ -309,6 +304,7 @@ SUB DoBasicExperiment()
 		IF leverstatus% = 1 THEN 
 			'Write it down
 		END IF
+	TryWrite
 	WEND
 END SUB
 
@@ -341,14 +337,12 @@ SUB RewardEachNthLever (nth%)
 			ActivateFeeder
 			activated% = 1
 		END IF
+		TryWrite
 	WEND
 END SUB
 
 SUB RewardFirst
 	SHARED rdur AS SINGLE
-	'---
-	'checks for lever press during the cycle if the experiment is evil
-	'---
 	loopstarttime! = GetTime
 	feederactivated% = 0
 	rewarddone% = 0
@@ -362,12 +356,12 @@ SUB RewardFirst
 			feederactivated% = 1
 		END IF
 		IF feederstatus% = 0 AND feederactivated% = 1 THEN rewarddone% = 1		'if the reward was given, we finish the subroutine
+		TryWrite
 	WEND
 END SUB
 '----------------------------------------------------------------------------
 '       HELPER SUBROUTINES
 '----------------------------------------------------------------------------
-
 SUB WaitForTime (t!) 'basically does nothing, just waits
 	starttime! = GetTime
 	WHILE starttime! + t! >= GetTime
@@ -389,26 +383,26 @@ END IF
 END SUB
 
 FUNCTION CheckFeeder
-SHARED feeder AS TFeeder
-SHARED timesincestart AS SINGLE
+	SHARED feeder AS TFeeder
+	SHARED timesincestart AS SINGLE
 
-CheckFeeder = feeder.status * 2 'What is this?
-IF feeder.status < 0 THEN 'this happens in the activate feeder
-	'if we want to activate the feeder and the time of activation was set in the ActivateFeeder function
-	IF timesincestart >= feeder.lasttimeactivated THEN
-		feeder.status = 1 'sets the status to activated
-		'actually turns on the feeder or BEEPS in case the parallel port does not exist
-		IF feeder.address >= 0 THEN OUT feeder.address, 2 ^ feeder.bit - 1 ELSE SOUND 1000, 2
-		CheckFeeder = 1
+	CheckFeeder = feeder.status * 2 'What is this?
+	IF feeder.status < 0 THEN 'this happens in the activate feeder
+		'if we want to activate the feeder and the time of activation was set in the ActivateFeeder function
+		IF timesincestart >= feeder.lasttimeactivated THEN
+			feeder.status = 1 'sets the status to activated
+			'actually turns on the feeder or BEEPS in case the parallel port does not exist
+			IF feeder.address >= 0 THEN OUT feeder.address, 2 ^ feeder.bit - 1 ELSE SOUND 1000, 2
+			CheckFeeder = 1
+		END IF
+		'if we wanted to have the feeder activated, but it's already running for its duration, we turn it off
+	ELSEIF feeder.status = 1 AND timesincestart - feeder.lasttimeactivated > feeder.duration THEN
+		'this allows the feeder to be turned on
+		feeder.status = 0
+		'InitLever          'do I need it? don't think so
+		IF feeder.address >= 0 THEN OUT feeder.address, 0 ELSE SOUND 500, 2 'turns the feeder off
+		CheckFeeder = 0
 	END IF
-	'if we wanted to have the feeder activated, but it's already running for its duration, we turn it off
-ELSEIF feeder.status = 1 AND timesincestart - feeder.lasttimeactivated > feeder.duration THEN
-	'this allows the feeder to be turned on
-	feeder.status = 0
-	'InitLever          'do I need it? don't think so
-	IF feeder.address >= 0 THEN OUT feeder.address, 0 ELSE SOUND 500, 2 'turns the feeder off
-	CheckFeeder = 0
-END IF
 END FUNCTION
 
 FUNCTION CheckLever                     'returns 1, 3 or lever.status * 2
@@ -456,11 +450,15 @@ ELSE
 END IF
 END FUNCTION
 
-FUNCTION TryWrite (time!)
-	IF time! - GetTime > writeinterval THEN                 'if the time from the last log is larger than the logging frequency
-		Write2File                                          'we write the log
-		TryWrite = GetTime                                  'and send the the time of the log to the SUBROUTINE, so that it knows when it was made                                                        
-	ELSE TryWrite = time!                                   'otherwise we send the time back
+
+'----------------------------------------------------------------------------
+'       WRITE FUNCTIONS
+'----------------------------------------------------------------------------
+SUB TryWrite
+	STATIC lasttimewrite!
+	IF GetTime - lasttimewrite! > writeinterval THEN            'if the time from the last log is larger than the logging frequency
+		Write2File                                          	'we write the log
+		lasttimewrite! = GetTime                                'and send the the time of the log to the SUBROUTINE, so that it knows when it was made                                                                                        'otherwise we send the time back
 	END IF
 END FUNCTION
 
@@ -473,6 +471,24 @@ SUB WriteHeader
 	PRINT #fid, "Reward type: ", rtype
 	PRINT #fid,	"Duration of reward cycle: ",  rdur
 	PRINT #fid, "Inter trial time: ", intertrialtime
+	PRINT #fid, "----------"
+END SUB
+
+SUB WriteEvent(str$)
+	PRINT #fid, str$, ";". GetTime
+END SUB
+
+SUB WriteTestPhaseEnded
+	WriteEvent("WriteTestPhaseEnded")
+END SUB
+SUB WriteRewardEnded
+	WriteEvent("WriteRewardPhaseEnded")
+END SUB
+SUB WriteTestPhaseStarted
+	WriteEvent("WriteTestPhaseStarted")
+END SUB
+SUB WriteRewardStarted
+	WriteEvent("WriteRewardPhaseStarted")
 END SUB
 
 SUB Write2File
