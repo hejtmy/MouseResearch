@@ -348,20 +348,30 @@ SUB RewardFirst
 	'---
 	loopstarttime! = GetTime
 	feederactivated% = 0
-	WHILE loopstarttime! + rdur >= GetTime  'the mouse has only specified time to press the lever
+	rewarddone% = 0
+	WHILE loopstarttime! + rdur >= GetTime AND rewarddone% = 0  				'the mouse has only specified time to press the lever
+		timesincestart = GetTime
 		leverstatus% = CheckLever
+		feederstatus% = CheckFeeder
 		'need to log it in the script
 		IF leverstatus% = 1 AND feederactivated% = 0 THEN
 			ActivateFeeder
 			feederactivated% = 1
 		END IF
+		IF feederstatus% = 0 AND feederactivated% = 1 THEN rewarddone% = 1		'if the reward was given, we finish the subroutine
 	WEND
 END SUB
 '----------------------------------------------------------------------------
 '       HELPER SUBROUTINES
 '----------------------------------------------------------------------------
 
-
+SUB WaitForTime (t!) 'basically does nothing, just waits
+	starttime! = GetTime
+	WHILE starttime! + t! >= GetTime
+		
+	WEND
+	CLOSE
+END SUB
 '----------------------------------------------------------------------------
 '       CONNECTION SUBROUTINES
 '----------------------------------------------------------------------------
@@ -445,22 +455,11 @@ END FUNCTION
 
 FUNCTION TryWrite (time!)
 	IF time! - GetTime > writeinterval THEN                 'if the time from the last log is larger than the logging frequency
-		Write2File                                                                      'we write the log
-		TryWrite = GetTime                                                      'and send the the time of the log to the SUBROUTINE, so that it knows when it was made                                                        
-	ELSE TryWrite = time!                                                   'otherwise we send the time back
+		Write2File                                          'we write the log
+		TryWrite = GetTime                                  'and send the the time of the log to the SUBROUTINE, so that it knows when it was made                                                        
+	ELSE TryWrite = time!                                   'otherwise we send the time back
 	END IF
 END FUNCTION
-
-'----------------------------------------------------------------------------
-'       EXPERIMENTAL SUBROUTINES
-'----------------------------------------------------------------------------
-SUB WaitForTime (t!) 'basically does nothing, just waits
-	starttime! = GetTime
-	WHILE starttime! + t! >= GetTime
-		
-	WEND
-	CLOSE
-END SUB
 
 SUB Write2File
 
