@@ -448,7 +448,7 @@ SUB Write2File
 	SHARED lever AS TLever, feeder AS TFeeder
 	SHARED timesincestart AS SINGLE
 	SHARED icycle AS INTEGER
-	PRINT "Info Written"
+	timesincestart = GetTime
 	'WHAT do we want to write down?
 	'TIME, CYCLE NUMBER, PHASE, LEVER STATUS, FEEDER STATUS
 	PRINT #fid, USING fstr$; timesincestart; icycle, phase; CheckLever; CheckFeeder
@@ -457,18 +457,11 @@ SUB Write2File
 END SUB
 
 SUB Write2Screen
-  SHARED Lever AS TLever, Feeder AS TFeeder
-  SHARED Cs() AS TCycle, Rs() AS TRectangle, Nps()
-  SHARED t, tc, c, ct, h, fid, msg, fstr$, key$
-
-
-  LOCATE 1, 1
-  PRINT "t:"; INT(t / 100); INT(Lever.tRew / 100);
-  PRINT ", #p:"; Lever.n; Lever.nRew; "#pct:";
-  FOR k = LBOUND(Nps) TO UBOUND(Nps) - 1: PRINT Nps(k); : NEXT k
-  PRINT ", #rew:"; Nps(UBOUND(Nps));
-  'PRINT ", tc:"; FIX(tc / 100);
-  PRINT ", c:"; c + 1; ", h:"; h + 1; "msg:"; USING "######"; msg
-
-
+  SHARED lever AS TLever, feeder AS TFeeder
+	SHARED timesincestart AS SINGLE
+	SHARED icycle AS INTEGER
+	timesincestart = GetTime
+	'WHAT do we want to write down?
+	'TIME, CYCLE NUMBER, PHASE, LEVER STATUS, FEEDER STATUS
+	PRINT USING fstr$; timesincestart; icycle, phase; CheckLever; CheckFeeder
 END SUB
