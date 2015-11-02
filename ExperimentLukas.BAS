@@ -225,8 +225,6 @@ startmaincycle:                                                                 
 	PRINT "cycle started"
 	'plays the experimental scenario based on the input values
 	SELECT CASE etype
-	loopstarttime! = GetTime
-	lasttimewrite! = loopstarttime! 
 		'---
 		'checks for lever press during the cycle if the experiment is evil
 		'---
