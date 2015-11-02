@@ -285,8 +285,8 @@ FUNCTION DoDRLExperiment()
 	WHILE loopstarttime! + cdur >= GetTime AND exit% = 0 
 		timesincestart = GetTime
 		leverstatus% = CheckLever
-		'Write that the mouse pressed the lever
 		IF leverstatus% = 1 THEN 
+		'Write that the mouse pressed the lever
 			DoDRLExperiment = 0 'the evil step, we return 0, meaning the step ended prematurely
 			exit% = 1
 		END IF
@@ -320,24 +320,22 @@ SUB RewardEachNthLever (nth%)
 	SHARED lever AS TLever
 	SHARED rdur AS SINGLE
 	SHARED timesincestart AS SINGLE
-	activated% = 1
 	numberofpresses% = 0
 	previouslever% = 0
 	loopstarttime! = GetTime
 	WHILE loopstarttime! + rdur >= GetTime
 		timesincestart = GetTime
-		leverstatus% = CheckLever
-		f% = CheckFeeder	'checks the 
+		leverstatus% = CheckLever		'checks the lever
+		f% = CheckFeeder				'checks the feeder - if it's running
 		'need to log it in the script
 		IF leverstatus% = 1 AND previouslever% = 0 AND f% = 0 THEN 	'if the new lever follows no lever pressed and the feeder is not going, we increment the number of presses
 			numberofpresses% = numberofpresses% + 1
 			previouslever% = 1
 		END IF
 		IF leverstatus% = 0 THEN 	'if the lever was released we can start counting again
-			activated% = 0
 			previouslever% = 0
 		END IF
-		IF numberofpresses% > 0 AND(numberofpresses% MOD nth%) = 0 AND activated% = 0 THEN 
+		IF numberofpresses% > 0 AND(numberofpresses% MOD nth%) = 0 THEN 
 			ActivateFeeder
 			activated% = 1
 		END IF
