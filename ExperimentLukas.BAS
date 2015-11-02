@@ -223,11 +223,9 @@ startmaincycle:                                                                 
 	'---
 	'gets the last time a log has been made
 	PRINT "cycle started"
+	
 	'plays the experimental scenario based on the input values
 	SELECT CASE etype
-		'---
-		'checks for lever press during the cycle if the experiment is evil
-		'---
 		CASE "DRL"
 			drl% = DoDRLExperiment
 			lasttimewrite! = TryWrite(lasttimewrite!)
@@ -239,9 +237,9 @@ startmaincycle:                                                                 
 			lasttimewrite! = TryWrite(lasttimewrite!)
 		CASE ELSE
 	END SELECT
-	'---
+	'-------------------
 	'       REWARD PHASE
-	'---
+	'-------------------
 	PRINT "reward phase started"
 	SELECT CASE rtype
 		CASE "EACH"
@@ -255,6 +253,7 @@ startmaincycle:                                                                 
 		CASE ELSE
 			PRINT "ELSE"
 	END SELECT
+
 	PRINT "inter trial started"
 	WaitForTime (intertrialtime)    'problem - mouse doesn't know it stopped being rewarded - how to distinguis inter trial and reward phase?
 	endmaincycle:                   'goto point
@@ -263,9 +262,8 @@ NEXT icycle
 'needs to turn off the feeder
 
 CLOSE #fid
-'turns off the feeder
-if feeder.address >0 THEN OUT feeder.address, 0
 
+if feeder.address >0 THEN OUT feeder.address, 0	'turns off the feeder
 
 PRINT "EXPERIMENT FINISHED, PLEASE PRESS A KEY"
 
@@ -368,7 +366,7 @@ END SUB
 SUB WaitForTime (t!) 'basically does nothing, just waits
 	starttime! = GetTime
 	WHILE starttime! + t! >= GetTime
-		
+		'waiting
 	WEND
 	CLOSE
 END SUB
