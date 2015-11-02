@@ -317,7 +317,6 @@ SUB RewardEachLever
 END SUB
 
 SUB RewardEachNthLever (nth%)
-	SHARED lever AS TLever
 	SHARED rdur AS SINGLE
 	SHARED timesincestart AS SINGLE
 	numberofpresses% = 0
@@ -344,7 +343,6 @@ END SUB
 
 SUB RewardFirst
 	SHARED rdur AS SINGLE
-	SHARED lever AS TLever
 	'---
 	'checks for lever press during the cycle if the experiment is evil
 	'---
