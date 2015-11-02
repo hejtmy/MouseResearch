@@ -433,6 +433,17 @@ SUB WaitForTime (t!) 'basically does nothing, just waits
 	CLOSE
 END SUB
 
+SUB WriteHeader
+	PRINT #fid, "Name of the experiment"
+	PRINT #fid, "Computer"
+	PRINT #fid, "Experiment type: ", etype 	'Type of experiment
+	PRINT #fid, "Number of cycles: ", icycle	'number of iterations
+	PRINT #fid, "Duration of each test cycle: ",  cdur	'length of each
+	PRINT #fid, "Reward type: ", rtype
+	PRINT #fid,	"Duration of reward cycle: ",  rdur
+	PRINT #fid, "Inter trial time: ", intertrialtime
+END SUB
+
 SUB Write2File
 	SHARED lever AS TLever, feeder AS TFeeder
 	SHARED timesincestart AS SINGLE
