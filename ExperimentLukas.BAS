@@ -66,11 +66,16 @@ DIM rtype AS STRING
 DIM rdur AS SINGLE
 DIM rnum AS INTEGER
 DIM intertrialtime AS SINGLE
+DIM phase AS STRING
+DIM icycle AS INTEGER
 
 '----------------------------------------------------------------------------
 '       Open output file
 '----------------------------------------------------------------------------
+<<<<<<< HEAD
 
+=======
+>>>>>>> write_file
 fid = FREEFILE
 namefile:
 INPUT ; "Type output file name and then press Enter: ", outfile$
@@ -213,11 +218,11 @@ startmaincycle:                                                                 
 	'---
 	'       WriteLoopStarted
 	'---			
-	
 	'---
 	'       SIGNAL
 	'---
 	
+<<<<<<< HEAD
 	'---
 	'       TEST PHASE
 	'---
@@ -253,15 +258,15 @@ startmaincycle:                                                                 
 		CASE ELSE
 			PRINT "ELSE"
 	END SELECT
-
-	PRINT "inter trial started"
+	phase = "INTERTRIAL"
 	WaitForTime (intertrialtime)    'problem - mouse doesn't know it stopped being rewarded - how to distinguis inter trial and reward phase?
-	endmaincycle:                   'goto point
+	endmaincycle:                      'goto point
 NEXT icycle
 
 'needs to turn off the feeder
 
 CLOSE #fid
+<<<<<<< HEAD
 
 if feeder.address >0 THEN OUT feeder.address, 0	'turns off the feeder
 
@@ -459,17 +464,35 @@ FUNCTION TryWrite (time!)
 	END IF
 END FUNCTION
 
-SUB Write2File
+SUB WriteHeader
+	PRINT #fid, "Name of the experiment"
+	PRINT #fid, "Computer"
+	PRINT #fid, "Experiment type: ", etype 	'Type of experiment
+	PRINT #fid, "Number of cycles: ", icycle	'number of iterations
+	PRINT #fid, "Duration of each test cycle: ",  cdur	'length of each
+	PRINT #fid, "Reward type: ", rtype
+	PRINT #fid,	"Duration of reward cycle: ",  rdur
+	PRINT #fid, "Inter trial time: ", intertrialtime
+END SUB
 
-  SHARED lever AS TLever, feeder AS TFeeder
-  SHARED timesincestart AS SINGLE
-	PRINT "Info Written"
+SUB Write2File
+	SHARED lever AS TLever, feeder AS TFeeder
+	SHARED timesincestart AS SINGLE
+	SHARED icycle AS INTEGER
+	timesincestart = GetTime
 	'WHAT do we want to write down?
-	'PRINT #fid, USING fstr$; msg; t; tc; c + 1; h + 1; ct + 1;
+	'TIME, CYCLE NUMBER, PHASE, LEVER STATUS, FEEDER STATUS
+	PRINT #fid, USING fstr$; timesincestart; icycle, phase; CheckLever; CheckFeeder
 	'PRINT #fid, USING fstr$; Cs(ct).sch(Cs(ct).k);
-	'FOR j = LBOUND(Rs) TO UBOUND(Rs)
-	  'PRINT #fid, USING fstr$; Rs(j).x; Rs(j).y;
-	'NEXT j
 	'PRINT #fid,
 END SUB
 
+SUB Write2Screen
+  SHARED lever AS TLever, feeder AS TFeeder
+	SHARED timesincestart AS SINGLE
+	SHARED icycle AS INTEGER
+	timesincestart = GetTime
+	'WHAT do we want to write down?
+	'TIME, CYCLE NUMBER, PHASE, LEVER STATUS, FEEDER STATUS
+	PRINT USING fstr$; timesincestart; icycle, phase; CheckLever; CheckFeeder
+END SUB
