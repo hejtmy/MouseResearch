@@ -24,6 +24,8 @@ DECLARE SUB Write2File
 DECLARE SUB WriteHeader
 DECLARE SUB WriteEvent(event$)
 
+DECLARE SUB Signal		'signal for the rat
+
 OPTION BASE 1
 '----------------------------------------------------------------------------
 '       Define user types
@@ -247,7 +249,7 @@ FOR icycle = 1 TO numcycles STEP 1
     '-----------------------
     '       SIGNAL
     '-----------------------
-
+	Signal	 
     '-----------------------
     '       TEST PHASE
     '-----------------------
@@ -400,6 +402,10 @@ starttime! = GetTime
 WHILE starttime! + t! >= GetTime
     'waiting
 WEND
+END SUB
+
+SUB Signal
+	SOUND 500, 2
 END SUB
 '----------------------------------------------------------------------------
 '       CONNECTION SUBROUTINES
