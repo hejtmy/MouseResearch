@@ -183,8 +183,9 @@ rdur = imprdur!
 '       INICIALIZATIONS
 '----------------------------------------------------------------------------
 
-intertrialtime = 5
+intertrialtime = 1
 writeinterval = 2
+fstr$ = "########"
 '----------------------------------------------------------------------------
 '       PORT ACTIVATION
 '----------------------------------------------------------------------------
@@ -203,17 +204,16 @@ feeder.duration = 1
 '----------------------------------------------------------------------------
 
 timesincestart = GetTime 'START OF THE EXPERIMENT
-
+WriteHeader
+WriteEvent ("ExperimentStarted")
+PRINT "experiments started"
 FOR icycle = 1 TO numcycles STEP 1
     startmaincycle: 'goto point
-    '---
-    'In the designated loop time
-    '---
-
+    PRINT "cycle started"
     '----------------------------
     '       WriteLoopStarted
     '----------------------------
-    WriteEvent ("ExperimentStarted")
+
     '-----------------------
     '       SIGNAL
     '-----------------------
@@ -225,6 +225,7 @@ FOR icycle = 1 TO numcycles STEP 1
     WriteTestPhaseStarted
 
     'plays the experimental scenario based on the input values
+    PRINT "test phase started"
     SELECT CASE etype
         CASE "DRL"
             drl% = DoDRLExperiment
@@ -235,11 +236,13 @@ FOR icycle = 1 TO numcycles STEP 1
             'Write loop ended
         CASE ELSE
     END SELECT
+    PRINT "test ended"
     WriteTestPhaseEnded
     '-------------------------
     '       REWARD PHASE
     '--------------------------
     WriteRewardPhaseStarted
+    PRINT "reward started"
     SELECT CASE rtype
         CASE "EACH"
             RewardEachLever
@@ -252,10 +255,13 @@ FOR icycle = 1 TO numcycles STEP 1
         CASE ELSE
             PRINT "ELSE"
     END SELECT
+    PRINT "reward ended"
     WriteRewardPhaseEnded
+    PRINT "intertrial started"
     phase = "INTERTRIAL"
-    WaitForTime (intertrialtime) 'problem - mouse doesn't know it stopped being rewarded - how to distinguis inter trial and reward phase?
+    InterTrialTimeSub 'problem - mouse doesn't know it stopped being rewarded - how to distinguis inter trial and reward phase?
     endmaincycle: 'goto point
+    PRINT "new cycle should start"
 NEXT icycle
 WriteEvent ("ExperimentEnded")
 CLOSE #fid
@@ -432,6 +438,16 @@ lever.laststatus = lever.status 'resets the status
 
 END FUNCTION
 
+
+SUB InterTrialTimeSub 'basically does nothing, just waits
+SHARED intertrialtime AS SINGLE
+starttime! = GetTime
+WHILE starttime! + intertrialtime >= GetTime
+    TryWrite
+WEND
+CLOSE
+END SUB
+
 '----------------------------------------------------------------------------
 '       FUNCTIONS
 '----------------------------------------------------------------------------
@@ -454,12 +470,13 @@ END FUNCTION
 SUB TryWrite
 STATIC lasttimewrite!
 IF GetTime - lasttimewrite! > writeinterval THEN 'if the time from the last log is larger than the logging frequency
-    Write2File 'we write the log
+    'Write2File 'we write the log
     lasttimewrite! = GetTime 'and send the the time of the log to the SUBROUTINE, so that it knows when it was made                                                                                        'otherwise we send the time back
 END IF
 END FUNCTION
 
 SUB WriteHeader
+SHARED fid
 PRINT #fid, "Name of the experiment"
 PRINT #fid, "Computer"
 PRINT #fid, "Experiment type: ", etype 'Type of experiment
@@ -472,6 +489,8 @@ PRINT #fid, "----------"
 END SUB
 
 SUB WriteEvent (event$)
+SHARED fid
+SHARED fstr$
 PRINT #fid, event$, ";", GetTime
 END SUB
 
@@ -489,13 +508,16 @@ WriteEvent ("WriteRewardPhaseStarted")
 END SUB
 
 SUB Write2File
+SHARED fstr$
 SHARED lever AS TLever, feeder AS TFeeder
 SHARED timesincestart AS SINGLE
 SHARED icycle AS INTEGER
+SHARED phase AS STRING
+SHARED fid
 timesincestart = GetTime
 'WHAT do we want to write down?
 'TIME, CYCLE NUMBER, PHASE, LEVER STATUS, FEEDER STATUS
-PRINT #fid, USING fstr$; timesincestart; icycle, phase; CheckLever; CheckFeeder
+PRINT #fid, timesincestart; icycle, phase; CheckLever; CheckFeeder
 'PRINT #fid, USING fstr$; Cs(ct).sch(Cs(ct).k);
 'PRINT #fid,
 END SUB
