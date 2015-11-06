@@ -1,8 +1,8 @@
-DECLARE FUNCTION GetTime! ()
-DECLARE FUNCTION CheckFeeder! ()
-DECLARE SUB ActivateFeeder ()
-DECLARE SUB Write2File ()
-DECLARE FUNCTION CheckLever ()
+DECLARE FUNCTION GetTime! 
+DECLARE FUNCTION CheckFeeder!
+DECLARE FUNCTION CheckLever
+DECLARE SUB ActivateFeeder
+
 DECLARE FUNCTION MidnightCorrection (time!)
 
 DECLARE SUB WaitForTime (waittime AS SINGLE)    'Runs for designated time - basically pauses the scrip
@@ -13,12 +13,16 @@ END TYPE
 
 DECLARE FUNCTION DoDRLExperiment
 DECLARE SUB DoBasicExperiment
+DECLARE SUB InterTrialTimeSub
 
 DECLARE SUB RewardEachLever
 DECLARE SUB RewardEachNthLever (nth%)
+DECLARE SUB RewardFirst
 
 DECLARE SUB TryWrite
-DECLARE SUB FillCycles (ncycles%, cdur)
+DECLARE SUB Write2File 
+DECLARE SUB WriteHeader
+DECLARE SUB	WriteEvent(event$)
 
 OPTION BASE 1
 '----------------------------------------------------------------------------
@@ -184,7 +188,7 @@ rdur = imprdur!
 '----------------------------------------------------------------------------
 
 intertrialtime = 1
-writeinterval = 2
+writeinterval = 0.2
 fstr$ = "########"
 '----------------------------------------------------------------------------
 '       PORT ACTIVATION
@@ -206,14 +210,15 @@ feeder.duration = 1
 timesincestart = GetTime 'START OF THE EXPERIMENT
 WriteHeader
 WriteEvent ("ExperimentStarted")
-PRINT "experiments started"
+PRINT "experiments started"		'DEBUG
+CLOSE #fid			'We open the stream inside the forloop
 FOR icycle = 1 TO numcycles STEP 1
     startmaincycle: 'goto point
-    PRINT "cycle started"
     '----------------------------
     '       WriteLoopStarted
     '----------------------------
-
+    OPEN outfile$ FOR APPEND AS #fid 	'For some reason For loop closes the stream so we need to reopen it each time
+    PRINT "cycle started"
     '-----------------------
     '       SIGNAL
     '-----------------------
@@ -222,10 +227,11 @@ FOR icycle = 1 TO numcycles STEP 1
     '       TEST PHASE
     '-----------------------
     'gets the last time a log has been made
-    WriteTestPhaseStarted
 
     'plays the experimental scenario based on the input values
-    PRINT "test phase started"
+    PRINT "test phase started"	'DEBUG
+	WriteEvent("TestPhaseStarted")
+	phase = "TEST"
     SELECT CASE etype
         CASE "DRL"
             drl% = DoDRLExperiment
@@ -236,13 +242,14 @@ FOR icycle = 1 TO numcycles STEP 1
             'Write loop ended
         CASE ELSE
     END SELECT
-    PRINT "test ended"
-    WriteTestPhaseEnded
+    PRINT "test ended"		'DEBUG
+    WriteEvent("TestPhaseEnded")
     '-------------------------
     '       REWARD PHASE
     '--------------------------
-    WriteRewardPhaseStarted
-    PRINT "reward started"
+    WriteEvent("RewardPhaseStarted")
+    PRINT "reward started"		'DEBUG
+	phase = "REWARD"
     SELECT CASE rtype
         CASE "EACH"
             RewardEachLever
@@ -255,17 +262,20 @@ FOR icycle = 1 TO numcycles STEP 1
         CASE ELSE
             PRINT "ELSE"
     END SELECT
-    PRINT "reward ended"
-    WriteRewardPhaseEnded
-    PRINT "intertrial started"
+    PRINT "reward ended"	'DEBUG
+    WriteEvent("RewardPhaseEnded")
+	WriteEvent("InterTrialStarted")
+    PRINT "intertrial started" 	'DEBUG
     phase = "INTERTRIAL"
     InterTrialTimeSub 'problem - mouse doesn't know it stopped being rewarded - how to distinguis inter trial and reward phase?
+	WriteEvent("InterTrialEnded")
     endmaincycle: 'goto point
-    PRINT "new cycle should start"
-NEXT icycle
+    PRINT "new cycle should start"		'DEBUG
+NEXT
+OPEN outfile$ FOR APPEND AS #fid		'FOR loop again closed the #fid so we reopen it
 WriteEvent ("ExperimentEnded")
 CLOSE #fid
-IF feeder.address > 0 THEN OUT feeder.address, 0 'turns off the feeder
+IF feeder.address > 0 THEN OUT feeder.address, 0 	'turns off the feeder
 PRINT "EXPERIMENT FINISHED, PLEASE PRESS A KEY"
 
 '----------------------------------------------------------------------------
@@ -469,8 +479,9 @@ END FUNCTION
 '----------------------------------------------------------------------------
 SUB TryWrite
 STATIC lasttimewrite!
+SHARED writeinterval AS SINGLE
 IF GetTime - lasttimewrite! > writeinterval THEN 'if the time from the last log is larger than the logging frequency
-    'Write2File 'we write the log
+    Write2File 'we write the log
     lasttimewrite! = GetTime 'and send the the time of the log to the SUBROUTINE, so that it knows when it was made                                                                                        'otherwise we send the time back
 END IF
 END FUNCTION
@@ -492,19 +503,6 @@ SUB WriteEvent (event$)
 SHARED fid
 SHARED fstr$
 PRINT #fid, event$, ";", GetTime
-END SUB
-
-SUB WriteTestPhaseEnded
-WriteEvent ("WriteTestPhaseEnded")
-END SUB
-SUB WriteRewardPhaseEnded
-WriteEvent ("WriteRewardPhaseEnded")
-END SUB
-SUB WriteTestPhaseStarted
-WriteEvent ("WriteTestPhaseStarted")
-END SUB
-SUB WriteRewardPhaseStarted
-WriteEvent ("WriteRewardPhaseStarted")
 END SUB
 
 SUB Write2File
