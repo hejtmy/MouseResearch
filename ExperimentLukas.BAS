@@ -1,4 +1,4 @@
-DECLARE FUNCTION GetTime! 
+DECLARE FUNCTION GetTime!
 DECLARE FUNCTION CheckFeeder!
 DECLARE FUNCTION CheckLever
 DECLARE SUB ActivateFeeder
@@ -20,9 +20,9 @@ DECLARE SUB RewardEachNthLever (nth%)
 DECLARE SUB RewardFirst
 
 DECLARE SUB TryWrite
-DECLARE SUB Write2File 
+DECLARE SUB Write2File
 DECLARE SUB WriteHeader
-DECLARE SUB	WriteEvent(event$)
+DECLARE SUB WriteEvent(event$)
 
 OPTION BASE 1
 '----------------------------------------------------------------------------
@@ -145,13 +145,24 @@ SELECT CASE inpetype$
         GOTO getexperimenttype
 END SELECT
 PRINT ""
-'getexperimentcycles
+
+getexperimentcycles:
 INPUT "How many cycles should there be in an experiment?: ", inpnumcycles% 'THIS IS NOT VALIDATED! TODO
-numcycles = inpnumcycles%
-PRINT ""
-'getexperimentduration
+IF inpnumcycles% > 0 THEN
+    numcycles = inpnumcycles%
+ELSE
+    PRINT ("You haven't selected any valid choice")
+    GOTO getexperimentcycles
+END IF
+
+getexperimentduration:
 INPUT "How long should the experiment cycle cycle last in seconds?: ", inpcdur! 'THIS IS NOT VALIDATED! TODO
-cdur = inpcdur!
+IF inpcdur! > 0 THEN
+    cdur = inpcdur!
+ELSE
+    PRINT ("You haven't selected any valid choice")
+    GOTO getexperimentduration
+END IF
 
 'INPUT the reward type
 getrewardtype:
@@ -172,17 +183,25 @@ END SELECT
 'get the reward number (seconds for
 IF rtype = "NTH" THEN
     PRINT ""
+    getrewardnumber:
     INPUT "You selected each nth lever press would bring reward. Please enter how often should that be (2,3,5 etc.): ", inprnum% 'THIS IS NOT VALIDATED! TODO
-    experiment.rewardnumber = inprnum%
-    rnum = inprnum%
+    IF inprnum% > 0 THEN
+        rnum = inprnum%
+    ELSE
+        PRINT ("You haven't selected any valid choice")
+        GOTO getrewardnumber
+    END IF
 END IF
 PRINT ""
 
-'getrewardduration
-INPUT "How long should the reward cycle last?: ", imprdur! 'THIS IS NOT VALIDATED! TODO
-experiment.rewardduration = imprdur!
-rdur = imprdur!
-
+getrewardduration:
+INPUT "How long should the reward cycle last?: ", inprdur! 'THIS IS NOT VALIDATED! TODO
+IF inprdur! > 0 THEN
+    rdur = inprdur!
+ELSE
+    PRINT ("You haven't selected any valid choice")
+    GOTO getrewardduration
+END IF
 '----------------------------------------------------------------------------
 '       INICIALIZATIONS
 '----------------------------------------------------------------------------
@@ -210,14 +229,12 @@ feeder.duration = 1
 timesincestart = GetTime 'START OF THE EXPERIMENT
 WriteHeader
 WriteEvent ("ExperimentStarted")
-PRINT "experiments started"		'DEBUG
-CLOSE #fid			'We open the stream inside the forloop
+PRINT "experiments started" 'DEBUG
 FOR icycle = 1 TO numcycles STEP 1
     startmaincycle: 'goto point
     '----------------------------
     '       WriteLoopStarted
     '----------------------------
-    OPEN outfile$ FOR APPEND AS #fid 	'For some reason For loop closes the stream so we need to reopen it each time
     PRINT "cycle started"
     '-----------------------
     '       SIGNAL
@@ -229,9 +246,9 @@ FOR icycle = 1 TO numcycles STEP 1
     'gets the last time a log has been made
 
     'plays the experimental scenario based on the input values
-    PRINT "test phase started"	'DEBUG
-	WriteEvent("TestPhaseStarted")
-	phase = "TEST"
+    PRINT "test phase started" 'DEBUG
+    WriteEvent ("TestPhaseStarted")
+    phase = "TEST"
     SELECT CASE etype
         CASE "DRL"
             drl% = DoDRLExperiment
@@ -242,14 +259,14 @@ FOR icycle = 1 TO numcycles STEP 1
             'Write loop ended
         CASE ELSE
     END SELECT
-    PRINT "test ended"		'DEBUG
-    WriteEvent("TestPhaseEnded")
+    PRINT "test ended" 'DEBUG
+    WriteEvent ("TestPhaseEnded")
     '-------------------------
     '       REWARD PHASE
     '--------------------------
-    WriteEvent("RewardPhaseStarted")
-    PRINT "reward started"		'DEBUG
-	phase = "REWARD"
+    WriteEvent ("RewardPhaseStarted")
+    PRINT "reward started" 'DEBUG
+    phase = "REWARD"
     SELECT CASE rtype
         CASE "EACH"
             RewardEachLever
@@ -262,20 +279,19 @@ FOR icycle = 1 TO numcycles STEP 1
         CASE ELSE
             PRINT "ELSE"
     END SELECT
-    PRINT "reward ended"	'DEBUG
-    WriteEvent("RewardPhaseEnded")
-	WriteEvent("InterTrialStarted")
-    PRINT "intertrial started" 	'DEBUG
+    PRINT "reward ended" 'DEBUG
+    WriteEvent ("RewardPhaseEnded")
+    WriteEvent ("InterTrialStarted")
+    PRINT "intertrial started" 'DEBUG
     phase = "INTERTRIAL"
     InterTrialTimeSub 'problem - mouse doesn't know it stopped being rewarded - how to distinguis inter trial and reward phase?
-	WriteEvent("InterTrialEnded")
+    WriteEvent ("InterTrialEnded")
     endmaincycle: 'goto point
-    PRINT "new cycle should start"		'DEBUG
+    PRINT "new cycle should start" 'DEBUG
 NEXT
-OPEN outfile$ FOR APPEND AS #fid		'FOR loop again closed the #fid so we reopen it
 WriteEvent ("ExperimentEnded")
 CLOSE #fid
-IF feeder.address > 0 THEN OUT feeder.address, 0 	'turns off the feeder
+IF feeder.address > 0 THEN OUT feeder.address, 0 'turns off the feeder
 PRINT "EXPERIMENT FINISHED, PLEASE PRESS A KEY"
 
 '----------------------------------------------------------------------------
@@ -455,7 +471,6 @@ starttime! = GetTime
 WHILE starttime! + intertrialtime >= GetTime
     TryWrite
 WEND
-CLOSE
 END SUB
 
 '----------------------------------------------------------------------------
