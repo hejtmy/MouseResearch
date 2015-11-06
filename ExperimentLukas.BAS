@@ -166,7 +166,6 @@ END IF
 
 'INPUT the reward type
 getrewardtype:
-PRINT ""
 INPUT ; "Please enter reward type (each, nth, first): ", inprtype$
 SELECT CASE inprtype$
     CASE "first"
@@ -179,6 +178,7 @@ SELECT CASE inprtype$
         PRINT ("You haven't selected any valid choice")
         GOTO getrewardtype
 END SELECT
+PRINT ""
 
 'get the reward number (seconds for
 IF rtype = "NTH" THEN
@@ -192,7 +192,6 @@ IF rtype = "NTH" THEN
         GOTO getrewardnumber
     END IF
 END IF
-PRINT ""
 
 getrewardduration:
 INPUT "How long should the reward cycle last?: ", inprdur! 'THIS IS NOT VALIDATED! TODO
@@ -202,12 +201,21 @@ ELSE
     PRINT ("You haven't selected any valid choice")
     GOTO getrewardduration
 END IF
+
+getintertrialtime:
+INPUT "How long should the intertrial time be?: ", inpinter! 'THIS IS NOT VALIDATED! TODO
+IF inpinter! > 0 THEN
+    intertrialtime = inpinter!
+ELSE
+    PRINT ("You haven't selected any valid choice")
+    GOTO getintertrialtime
+END IF
 '----------------------------------------------------------------------------
 '       INICIALIZATIONS
 '----------------------------------------------------------------------------
 
-intertrialtime = 1
-writeinterval = 0.2
+'intertrialtime = 1
+writeinterval = 0.01
 fstr$ = "########"
 '----------------------------------------------------------------------------
 '       PORT ACTIVATION
@@ -328,11 +336,6 @@ loopstarttime! = GetTime
 'we set the default return to 1
 WHILE loopstarttime! + cdur >= GetTime
     timesincestart = GetTime
-    leverstatus% = CheckLever
-    'Write that the mouse pressed the lever
-    IF leverstatus% = 1 THEN
-        'Write it down
-    END IF
     TryWrite
 WEND
 END SUB
@@ -354,7 +357,6 @@ WHILE loopstarttime! + rdur >= GetTime
     timesincestart = GetTime
     leverstatus% = CheckLever 'checks the lever
     f% = CheckFeeder 'checks the feeder - if it's running
-    'need to log it in the script
     IF leverstatus% = 1 AND previouslever% = 0 AND f% = 0 THEN 'if the new lever follows no lever pressed and the feeder is not going, we increment the number of presses
         numberofpresses% = numberofpresses% + 1
         previouslever% = 1
@@ -365,6 +367,7 @@ WHILE loopstarttime! + rdur >= GetTime
     IF numberofpresses% > 0 AND (numberofpresses% MOD nth%) = 0 THEN
         ActivateFeeder
         activated% = 1
+		WriteEvent("RewardAdministered")
     END IF
     TryWrite
 WEND
@@ -383,9 +386,10 @@ WHILE loopstarttime! + rdur >= GetTime AND rewarddone% = 0 'the mouse has only s
     IF leverstatus% = 1 AND feederactivated% = 0 THEN
         ActivateFeeder
         feederactivated% = 1
+		WriteEvent("RewardAdministered")
     END IF
     IF feederstatus% = 0 AND feederactivated% = 1 THEN rewarddone% = 1 'if the reward was given, we finish the subroutine
-    TryWrite
+	TryWrite
 WEND
 END SUB
 '----------------------------------------------------------------------------
@@ -396,7 +400,6 @@ starttime! = GetTime
 WHILE starttime! + t! >= GetTime
     'waiting
 WEND
-CLOSE
 END SUB
 '----------------------------------------------------------------------------
 '       CONNECTION SUBROUTINES
@@ -467,8 +470,10 @@ END FUNCTION
 
 SUB InterTrialTimeSub 'basically does nothing, just waits
 SHARED intertrialtime AS SINGLE
+SHARED timesincestart as SINGLE
 starttime! = GetTime
 WHILE starttime! + intertrialtime >= GetTime
+	timesincestart = GetTime
     TryWrite
 WEND
 END SUB
@@ -477,7 +482,7 @@ END SUB
 '       FUNCTIONS
 '----------------------------------------------------------------------------
 FUNCTION GetTime
-GetTime = TIMER
+GetTime = TIMER(.01)
 END FUNCTION
 
 FUNCTION MidnightCorrection (time!)
@@ -527,12 +532,9 @@ SHARED timesincestart AS SINGLE
 SHARED icycle AS INTEGER
 SHARED phase AS STRING
 SHARED fid
-timesincestart = GetTime
 'WHAT do we want to write down?
 'TIME, CYCLE NUMBER, PHASE, LEVER STATUS, FEEDER STATUS
-PRINT #fid, timesincestart; icycle, phase; CheckLever; CheckFeeder
-'PRINT #fid, USING fstr$; Cs(ct).sch(Cs(ct).k);
-'PRINT #fid,
+PRINT #fid, timesincestart; icycle; phase; CheckLever; CheckFeeder
 END SUB
 
 SUB Write2Screen
