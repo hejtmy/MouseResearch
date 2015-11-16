@@ -1,8 +1,8 @@
-DECLARE FUNCTION GetTime!
-DECLARE FUNCTION CheckFeeder!
-DECLARE FUNCTION CheckLever
-DECLARE SUB ActivateFeeder
-
+DECLARE FUNCTION GetTime! ()
+DECLARE FUNCTION CheckFeeder! ()
+DECLARE SUB ActivateFeeder ()
+DECLARE SUB Write2File ()
+DECLARE FUNCTION CheckLever ()
 DECLARE FUNCTION MidnightCorrection (time!)
 
 DECLARE SUB WaitForTime (waittime AS SINGLE)    'Runs for designated time - basically pauses the scrip
@@ -13,18 +13,12 @@ END TYPE
 
 DECLARE FUNCTION DoDRLExperiment
 DECLARE SUB DoBasicExperiment
-DECLARE SUB InterTrialTimeSub
 
 DECLARE SUB RewardEachLever
 DECLARE SUB RewardEachNthLever (nth%)
-DECLARE SUB RewardFirst
 
 DECLARE SUB TryWrite
-DECLARE SUB Write2File
-DECLARE SUB WriteHeader
-DECLARE SUB WriteEvent(event$)
-
-DECLARE SUB Signal		'signal for the rat
+DECLARE SUB FillCycles (ncycles%, cdur)
 
 OPTION BASE 1
 '----------------------------------------------------------------------------
@@ -147,27 +141,17 @@ SELECT CASE inpetype$
         GOTO getexperimenttype
 END SELECT
 PRINT ""
-
-getexperimentcycles:
+'getexperimentcycles
 INPUT "How many cycles should there be in an experiment?: ", inpnumcycles% 'THIS IS NOT VALIDATED! TODO
-IF inpnumcycles% > 0 THEN
-    numcycles = inpnumcycles%
-ELSE
-    PRINT ("You haven't selected any valid choice")
-    GOTO getexperimentcycles
-END IF
-
-getexperimentduration:
+numcycles = inpnumcycles%
+PRINT ""
+'getexperimentduration
 INPUT "How long should the experiment cycle cycle last in seconds?: ", inpcdur! 'THIS IS NOT VALIDATED! TODO
-IF inpcdur! > 0 THEN
-    cdur = inpcdur!
-ELSE
-    PRINT ("You haven't selected any valid choice")
-    GOTO getexperimentduration
-END IF
+cdur = inpcdur!
 
 'INPUT the reward type
 getrewardtype:
+PRINT ""
 INPUT ; "Please enter reward type (each, nth, first): ", inprtype$
 SELECT CASE inprtype$
     CASE "first"
@@ -180,45 +164,27 @@ SELECT CASE inprtype$
         PRINT ("You haven't selected any valid choice")
         GOTO getrewardtype
 END SELECT
-PRINT ""
 
 'get the reward number (seconds for
 IF rtype = "NTH" THEN
     PRINT ""
-    getrewardnumber:
     INPUT "You selected each nth lever press would bring reward. Please enter how often should that be (2,3,5 etc.): ", inprnum% 'THIS IS NOT VALIDATED! TODO
-    IF inprnum% > 0 THEN
-        rnum = inprnum%
-    ELSE
-        PRINT ("You haven't selected any valid choice")
-        GOTO getrewardnumber
-    END IF
+    experiment.rewardnumber = inprnum%
+    rnum = inprnum%
 END IF
+PRINT ""
 
-getrewardduration:
-INPUT "How long should the reward cycle last?: ", inprdur! 'THIS IS NOT VALIDATED! TODO
-IF inprdur! > 0 THEN
-    rdur = inprdur!
-ELSE
-    PRINT ("You haven't selected any valid choice")
-    GOTO getrewardduration
-END IF
+'getrewardduration
+INPUT "How long should the reward cycle last?: ", imprdur! 'THIS IS NOT VALIDATED! TODO
+experiment.rewardduration = imprdur!
+rdur = imprdur!
 
-getintertrialtime:
-INPUT "How long should the intertrial time be?: ", inpinter! 'THIS IS NOT VALIDATED! TODO
-IF inpinter! > 0 THEN
-    intertrialtime = inpinter!
-ELSE
-    PRINT ("You haven't selected any valid choice")
-    GOTO getintertrialtime
-END IF
 '----------------------------------------------------------------------------
 '       INICIALIZATIONS
 '----------------------------------------------------------------------------
 
-'intertrialtime = 1
-writeinterval = 0.01
-fstr$ = "########"
+intertrialtime = 5
+writeinterval = 2
 '----------------------------------------------------------------------------
 '       PORT ACTIVATION
 '----------------------------------------------------------------------------
@@ -237,20 +203,22 @@ feeder.duration = 1
 '----------------------------------------------------------------------------
 
 timesincestart = GetTime 'START OF THE EXPERIMENT
+WriteEvent("ExperimentStarted")
 WriteHeader
-WriteEvent ("ExperimentStarted")
-PRINT "experiments started" 'DEBUG
 FOR icycle = 1 TO numcycles STEP 1
     startmaincycle: 'goto point
+    '---
+    'In the designated loop time
+    '---
+
     '----------------------------
     '       WriteLoopStarted
     '----------------------------
 
-    PRINT "cycle started"
     '-----------------------
     '       SIGNAL
     '-----------------------
-	Signal	 
+	SOUND 1000, 2
     '-----------------------
     '       TEST PHASE
     '-----------------------
@@ -258,9 +226,6 @@ FOR icycle = 1 TO numcycles STEP 1
     WriteTestPhaseStarted
 	phase = "TEST"
     'plays the experimental scenario based on the input values
-    PRINT "test phase started" 'DEBUG
-    WriteEvent ("TestPhaseStarted")
-    phase = "TEST"
     SELECT CASE etype
         CASE "DRL"
             drl% = DoDRLExperiment
@@ -271,14 +236,12 @@ FOR icycle = 1 TO numcycles STEP 1
             'Write loop ended
         CASE ELSE
     END SELECT
-    PRINT "test ended" 'DEBUG
-    WriteEvent ("TestPhaseEnded")
+    WriteTestPhaseEnded
     '-------------------------
     '       REWARD PHASE
     '--------------------------
-    WriteEvent ("RewardPhaseStarted")
-    PRINT "reward started" 'DEBUG
-    phase = "REWARD"
+    WriteRewardPhaseStarted
+	phase = "REWARD"
     SELECT CASE rtype
         CASE "EACH"
             RewardEachLever
@@ -291,16 +254,11 @@ FOR icycle = 1 TO numcycles STEP 1
         CASE ELSE
             PRINT "ELSE"
     END SELECT
-    PRINT "reward ended" 'DEBUG
-    WriteEvent ("RewardPhaseEnded")
-    WriteEvent ("InterTrialStarted")
-    PRINT "intertrial started" 'DEBUG
+    WriteRewardPhaseEnded
     phase = "INTERTRIAL"
-    InterTrialTimeSub 'problem - mouse doesn't know it stopped being rewarded - how to distinguis inter trial and reward phase?
-    WriteEvent ("InterTrialEnded")
+    WaitForTime (intertrialtime) 'problem - mouse doesn't know it stopped being rewarded - how to distinguis inter trial and reward phase?
     endmaincycle: 'goto point
-    PRINT "new cycle should start" 'DEBUG
-NEXT
+NEXT icycle
 WriteEvent ("ExperimentEnded")
 CLOSE #fid
 IF feeder.address > 0 THEN OUT feeder.address, 0 'turns off the feeder
@@ -338,7 +296,12 @@ SHARED timesincestart AS SINGLE
 loopstarttime! = GetTime
 'we set the default return to 1
 WHILE loopstarttime! + cdur >= GetTime
-    timesincestart = GetTime
+    timesincestart = GetTime	'potentially redundant - happens in trywrite
+    leverstatus% = CheckLever	'potentially redundant - happens in trywrite
+    'Write that the mouse pressed the lever
+    IF leverstatus% = 1 THEN
+		'should be in the trywrite - all of this is redundant
+    END IF
     TryWrite
 WEND
 END SUB
@@ -360,6 +323,7 @@ WHILE loopstarttime! + rdur >= GetTime
     timesincestart = GetTime
     leverstatus% = CheckLever 'checks the lever
     f% = CheckFeeder 'checks the feeder - if it's running
+    'need to log it in the script
     IF leverstatus% = 1 AND previouslever% = 0 AND f% = 0 THEN 'if the new lever follows no lever pressed and the feeder is not going, we increment the number of presses
         numberofpresses% = numberofpresses% + 1
         previouslever% = 1
@@ -369,7 +333,6 @@ WHILE loopstarttime! + rdur >= GetTime
     END IF
     IF numberofpresses% > 0 AND (numberofpresses% MOD nth%) = 0 THEN
         ActivateFeeder
-		WriteEvent("RewardAdministered")
     END IF
     TryWrite
 WEND
@@ -388,10 +351,9 @@ WHILE loopstarttime! + rdur >= GetTime AND rewarddone% = 0 'the mouse has only s
     IF leverstatus% = 1 AND feederactivated% = 0 THEN
         ActivateFeeder
         feederactivated% = 1
-		WriteEvent("RewardAdministered")
     END IF
     IF feederstatus% = 0 AND feederactivated% = 1 THEN rewarddone% = 1 'if the reward was given, we finish the subroutine
-	TryWrite
+    TryWrite
 WEND
 END SUB
 '----------------------------------------------------------------------------
@@ -400,12 +362,9 @@ END SUB
 SUB WaitForTime (t!) 'basically does nothing, just waits
 starttime! = GetTime
 WHILE starttime! + t! >= GetTime
-    TryWrite
+    'waiting
 WEND
-END SUB
-
-SUB Signal
-	SOUND 500, 2
+CLOSE
 END SUB
 '----------------------------------------------------------------------------
 '       CONNECTION SUBROUTINES
@@ -448,7 +407,7 @@ SHARED lever AS TLever, feeder AS TFeeder
 SHARED timesincestart AS SINGLE
 
 IF lever.address >= 0 THEN 'only if we actually have a lever
-    lever.status = INP(lever.address) 'INPUT from parallel port on designated address - right computer gets 3 on pressed and 2 on left alone
+    IF feeder.address >= 0 THEN lever.status = INP(lever.address) 'INPUT from parallel port on designated address - right computer gets 3 on pressed and 2 on left alone
 END IF
 
 IF lever.laststatus <> lever.status THEN 'if the new status is different from the old one
@@ -473,22 +432,11 @@ lever.laststatus = lever.status 'resets the status
 
 END FUNCTION
 
-
-SUB InterTrialTimeSub 'basically does nothing, just waits
-SHARED intertrialtime AS SINGLE
-SHARED timesincestart as SINGLE
-starttime! = GetTime
-WHILE starttime! + intertrialtime >= GetTime
-	timesincestart = GetTime
-    TryWrite
-WEND
-END SUB
-
 '----------------------------------------------------------------------------
 '       FUNCTIONS
 '----------------------------------------------------------------------------
 FUNCTION GetTime
-GetTime = TIMER(.01)
+GetTime = TIMER
 END FUNCTION
 
 FUNCTION MidnightCorrection (time!)
@@ -504,7 +452,6 @@ END FUNCTION
 '----------------------------------------------------------------------------
 SUB TryWrite
 STATIC lasttimewrite!
-SHARED writeinterval AS SINGLE
 IF GetTime - lasttimewrite! > writeinterval THEN 'if the time from the last log is larger than the logging frequency
     Write2File 'we write the log
     lasttimewrite! = GetTime 'and send the the time of the log to the SUBROUTINE, so that it knows when it was made
@@ -532,16 +479,28 @@ PRINT #fid, event$, ";", GetTime
 PRINT #fid, "---"
 END SUB
 
+SUB WriteTestPhaseEnded
+WriteEvent ("WriteTestPhaseEnded")
+END SUB
+SUB WriteRewardPhaseEnded
+WriteEvent ("WriteRewardPhaseEnded")
+END SUB
+SUB WriteTestPhaseStarted
+WriteEvent ("WriteTestPhaseStarted")
+END SUB
+SUB WriteRewardPhaseStarted
+WriteEvent ("WriteRewardPhaseStarted")
+END SUB
+
 SUB Write2File
-SHARED fstr$
+SHARED fid  
 SHARED lever AS TLever, feeder AS TFeeder
 SHARED timesincestart AS SINGLE
 SHARED icycle AS INTEGER
-SHARED phase AS STRING
-SHARED fid
+timesincestart = GetTime
 'WHAT do we want to write down?
 'TIME, CYCLE NUMBER, PHASE, LEVER STATUS, FEEDER STATUS
-PRINT #fid, timesincestart; icycle; phase; CheckLever; CheckFeeder
+PRINT #fid, USING fstr$; timesincestart; icycle, phase; CheckLever; CheckFeeder
 END SUB
 
 SUB Write2Screen

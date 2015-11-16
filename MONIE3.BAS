@@ -701,7 +701,6 @@ SUB Write2Screen
   SHARED Cs() AS TCycle, Rs() AS TRectangle, Nps()
   SHARED t, tc, c, ct, h, fid, msg, fstr$, key$
 
-
   LOCATE 1, 1
   PRINT "t:"; INT(t / 100); INT(Lever.tRew / 100);
   PRINT ", #p:"; Lever.n; Lever.nRew; "#pct:";
@@ -709,7 +708,5 @@ SUB Write2Screen
   PRINT ", #rew:"; Nps(UBOUND(Nps));
   'PRINT ", tc:"; FIX(tc / 100);
   PRINT ", c:"; c + 1; ", h:"; h + 1; "msg:"; USING "######"; msg
-
-
 END SUB
 
