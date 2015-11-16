@@ -101,7 +101,8 @@ feeder.status = 0
 DO
 	timesincestart = GetTime
     key$ = INKEY$
-	if CheckLever = 3 THEN ActivateFeeder
+	print key$
+	//if CheckLever = 3 THEN ActivateFeeder
 	s% = CheckFeeder
 LOOP UNTIL key$ = CHR$(27)
 '----------------------------------------------------------------------------
