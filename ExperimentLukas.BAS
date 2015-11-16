@@ -1,7 +1,7 @@
-DECLARE FUNCTION GetTime!
-DECLARE FUNCTION CheckFeeder!
-DECLARE FUNCTION CheckLever
-DECLARE SUB ActivateFeeder
+DECLARE FUNCTION GetTime ()
+DECLARE FUNCTION CheckFeeder ()
+DECLARE FUNCTION CheckLever ()
+DECLARE SUB ActivateFeeder ()
 
 DECLARE FUNCTION MidnightCorrection (time!)
 
@@ -11,20 +11,20 @@ TYPE TCycle
     duration AS SINGLE 'cycle duration in seconds
 END TYPE
 
-DECLARE FUNCTION DoDRLExperiment
-DECLARE SUB DoBasicExperiment
-DECLARE SUB InterTrialTimeSub
+DECLARE FUNCTION DoDRLExperiment ()
+DECLARE SUB DoBasicExperiment ()
+DECLARE SUB InterTrialTimeSub ()
 
-DECLARE SUB RewardEachLever
+DECLARE SUB RewardEachLever ()
 DECLARE SUB RewardEachNthLever (nth%)
-DECLARE SUB RewardFirst
+DECLARE SUB RewardFirst ()
 
-DECLARE SUB TryWrite
-DECLARE SUB Write2File
-DECLARE SUB WriteHeader
+DECLARE SUB TryWrite ()
+DECLARE SUB Write2File ()
+DECLARE SUB WriteHeader ()
 DECLARE SUB WriteEvent(event$)
 
-DECLARE SUB Signal      'signal for the rat
+DECLARE SUB Signal2 ()      'signal for the rat
 
 OPTION BASE 1
 '----------------------------------------------------------------------------
@@ -250,7 +250,7 @@ FOR icycle = 1 TO numcycles STEP 1
     '-----------------------
     '       SIGNAL
     '-----------------------
-    Signal
+    Signal2
     '-----------------------
     '       TEST PHASE
     '-----------------------
@@ -261,9 +261,10 @@ FOR icycle = 1 TO numcycles STEP 1
     phase = "TEST"
     SELECT CASE etype
         CASE "DRL"
-            drl% = DoDRLExperiment
+			startdrl! = GetTime
+            DoDRLExperiment
             'Write loop ended
-            IF drl% = 0 THEN GOTO startmaincycle
+			IF GetTime - startdrl! < cdur THEN GOTO startmaincycle
         CASE "BASIC"
             DoBasicExperiment
             'Write loop ended
@@ -311,23 +312,23 @@ PRINT "EXPERIMENT FINISHED, PLEASE PRESS A KEY"
 '----------------------------------------------------------------------------
 '       EXPERIMENT SUBROUTINES
 '----------------------------------------------------------------------------
-FUNCTION DoDRLExperiment ()
+SUB DoDRLExperiment ()
 SHARED cdur AS SINGLE
 SHARED lever AS TLever
 SHARED timesincestart AS SINGLE
 exiting% = 0
 loopstarttime! = GetTime
-DoDRLExperiment = 1 'we set the default return to 1
-WHILE loopstarttime! + cdur >= GetTime AND DoDRLExperiment = 1
+running = 1 		'we set the default return to 1
+WHILE loopstarttime! + cdur >= GetTime AND running = 1
     timesincestart = GetTime
     leverstatus% = CheckLever
     IF leverstatus% = 1 THEN
         'Write that the mouse pressed the lever - should be in the TryWriteFunction
-        DoDRLExperiment = 0 'the evil step, we return 0, meaning the step ended prematurely
+        runing = 0 'the evil step, we return 0, meaning the step ended prematurely
     END IF
     TryWrite
 WEND
-END FUNCTION
+END SUB
 
 SUB DoBasicExperiment ()
 SHARED cdur AS SINGLE
@@ -352,6 +353,7 @@ SUB RewardEachNthLever (nth%)
 SHARED rdur AS SINGLE
 SHARED timesincestart AS SINGLE
 numberofpresses% = 0
+activated% = 0
 previouslever% = 0
 loopstarttime! = GetTime
 WHILE loopstarttime! + rdur >= GetTime
@@ -361,12 +363,15 @@ WHILE loopstarttime! + rdur >= GetTime
     IF leverstatus% = 1 AND previouslever% = 0 AND f% = 0 THEN 'if the new lever follows no lever pressed and the feeder is not going, we increment the number of presses
         numberofpresses% = numberofpresses% + 1
         previouslever% = 1
+		activated% = 0
     END IF
     IF leverstatus% = 0 THEN 'if the lever was released we can start counting again
         previouslever% = 0
     END IF
-    IF numberofpresses% > 0 AND (numberofpresses% MOD nth%) = 0 THEN
+	'if we should activate the feeder and it's not running
+    IF numberofpresses% > 0 AND (numberofpresses% MOD nth%) = 0 AND f% = 0 AND Activated% = 0 THEN
         ActivateFeeder
+		activated% = 1
         WriteEvent ("RewardAdministered")
     END IF
     TryWrite
@@ -375,6 +380,7 @@ END SUB
 
 SUB RewardFirst
 SHARED rdur AS SINGLE
+SHARED timesincestart AS SINGLE
 loopstarttime! = GetTime
 feederactivated% = 0 'if the feeder has alrady been activated once
 rewarddone% = 0
@@ -382,7 +388,6 @@ WHILE loopstarttime! + rdur >= GetTime AND rewarddone% = 0 'the mouse has only s
     timesincestart = GetTime
     leverstatus% = CheckLever
     feederstatus% = CheckFeeder
-    'need to log it in the script
     IF leverstatus% = 1 AND feederactivated% = 0 THEN
         ActivateFeeder
         feederactivated% = 1
@@ -402,8 +407,8 @@ WHILE starttime! + t! >= GetTime
 WEND
 END SUB
 
-SUB Signal
-SOUND 500, 2
+SUB Signal2
+	SOUND 500, 2
 END SUB
 '----------------------------------------------------------------------------
 '       CONNECTION SUBROUTINES
@@ -486,7 +491,7 @@ END SUB
 '       FUNCTIONS
 '----------------------------------------------------------------------------
 FUNCTION GetTime
-GetTime = TIMER(.01)
+GetTime = TIMER
 END FUNCTION
 
 FUNCTION MidnightCorrection (time!)
