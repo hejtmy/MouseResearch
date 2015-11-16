@@ -24,7 +24,7 @@ DECLARE SUB Write2File
 DECLARE SUB WriteHeader
 DECLARE SUB WriteEvent(event$)
 
-DECLARE SUB Signal		'signal for the rat
+DECLARE SUB Signal      'signal for the rat
 
 OPTION BASE 1
 '----------------------------------------------------------------------------
@@ -48,12 +48,12 @@ TYPE TLever
 END TYPE
 
 TYPE TFeeder
-    duration AS SINGLE 			'duration (10msec) of feeder activation
-    delay AS SINGLE 			'activation delay (10msec)
-    activatetime AS SINGLE 		'time (10msec) of the last activation
-    status AS INTEGER 			'0..no activated, -1 or 1..activated
-    address AS LONG 			'parallel port address
-    bit AS LONG 				'which bit on the port is used:
+    duration AS SINGLE 'duration (10msec) of feeder activation
+    delay AS SINGLE 'activation delay (10msec)
+    activatetime AS SINGLE 'time (10msec) of the last activation
+    status AS INTEGER '0..no activated, -1 or 1..activated
+    address AS LONG 'parallel port address
+    bit AS LONG 'which bit on the port is used:
 END TYPE
 '----------------------------------------------------------------------------
 '       DECLARE VARIABLES
@@ -250,13 +250,11 @@ FOR icycle = 1 TO numcycles STEP 1
     '-----------------------
     '       SIGNAL
     '-----------------------
-	Signal	 
+    Signal
     '-----------------------
     '       TEST PHASE
     '-----------------------
-    'gets the last time a log has been made
-    WriteTestPhaseStarted
-	phase = "TEST"
+    phase = "TEST"
     'plays the experimental scenario based on the input values
     PRINT "test phase started" 'DEBUG
     WriteEvent ("TestPhaseStarted")
@@ -369,7 +367,7 @@ WHILE loopstarttime! + rdur >= GetTime
     END IF
     IF numberofpresses% > 0 AND (numberofpresses% MOD nth%) = 0 THEN
         ActivateFeeder
-		WriteEvent("RewardAdministered")
+        WriteEvent ("RewardAdministered")
     END IF
     TryWrite
 WEND
@@ -378,7 +376,7 @@ END SUB
 SUB RewardFirst
 SHARED rdur AS SINGLE
 loopstarttime! = GetTime
-feederactivated% = 0	'if the feeder has alrady been activated once
+feederactivated% = 0 'if the feeder has alrady been activated once
 rewarddone% = 0
 WHILE loopstarttime! + rdur >= GetTime AND rewarddone% = 0 'the mouse has only specified time to press the lever
     timesincestart = GetTime
@@ -388,10 +386,10 @@ WHILE loopstarttime! + rdur >= GetTime AND rewarddone% = 0 'the mouse has only s
     IF leverstatus% = 1 AND feederactivated% = 0 THEN
         ActivateFeeder
         feederactivated% = 1
-		WriteEvent("RewardAdministered")
+        WriteEvent ("RewardAdministered")
     END IF
     IF feederstatus% = 0 AND feederactivated% = 1 THEN rewarddone% = 1 'if the reward was given, we finish the subroutine
-	TryWrite
+    TryWrite
 WEND
 END SUB
 '----------------------------------------------------------------------------
@@ -405,7 +403,7 @@ WEND
 END SUB
 
 SUB Signal
-	SOUND 500, 2
+SOUND 500, 2
 END SUB
 '----------------------------------------------------------------------------
 '       CONNECTION SUBROUTINES
@@ -425,7 +423,7 @@ SHARED feeder AS TFeeder
 SHARED timesincestart AS SINGLE
 
 CheckFeeder = feeder.status
-IF feeder.status < 0 THEN 	'this happens in the activate feeder
+IF feeder.status < 0 THEN 'this happens in the activate feeder
     'if we want to activate the feeder and the time of activation was set in the ActivateFeeder function
     IF timesincestart >= feeder.activatetime THEN
         feeder.status = 1 'sets the status to activated
@@ -476,10 +474,10 @@ END FUNCTION
 
 SUB InterTrialTimeSub 'basically does nothing, just waits
 SHARED intertrialtime AS SINGLE
-SHARED timesincestart as SINGLE
+SHARED timesincestart AS SINGLE
 starttime! = GetTime
 WHILE starttime! + intertrialtime >= GetTime
-	timesincestart = GetTime
+    timesincestart = GetTime
     TryWrite
 WEND
 END SUB
@@ -512,7 +510,7 @@ END IF
 END FUNCTION
 
 SUB WriteHeader
-SHARED fid  
+SHARED fid
 PRINT #fid, "HEADER"
 PRINT #fid, "Name of the experiment"
 PRINT #fid, "Computer"
@@ -526,7 +524,7 @@ PRINT #fid, "*********"
 END SUB
 
 SUB WriteEvent (event$)
-SHARED fid  
+SHARED fid
 PRINT #fid, "---"
 PRINT #fid, event$, ";", GetTime
 PRINT #fid, "---"
