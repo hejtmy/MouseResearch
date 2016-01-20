@@ -11,7 +11,7 @@ TYPE TCycle
     duration AS SINGLE 'cycle duration in seconds
 END TYPE
 
-DECLARE FUNCTION DoDRLExperiment ()
+DECLARE SUB DoDRLExperiment ()
 DECLARE SUB DoBasicExperiment ()
 DECLARE SUB InterTrialTimeSub ()
 
@@ -58,6 +58,7 @@ END TYPE
 '----------------------------------------------------------------------------
 '       DECLARE VARIABLES
 '----------------------------------------------------------------------------
+
 DIM timesincestart AS SINGLE
 DIM lever AS TLever
 DIM feeder AS TFeeder
@@ -264,7 +265,10 @@ FOR icycle = 1 TO numcycles STEP 1
 			startdrl! = GetTime
             DoDRLExperiment
             'Write loop ended
-			IF GetTime - startdrl! < cdur THEN GOTO startmaincycle
+			IF GetTime - startdrl! < cdur THEN 
+				WriteEvent ("DRL reverted")
+				GOTO startmaincycle
+			ENDIF
         CASE "BASIC"
             DoBasicExperiment
             'Write loop ended
@@ -516,9 +520,9 @@ END FUNCTION
 
 SUB WriteHeader
 SHARED fid
+SHARED etype, icycle, cdur,rtype,rdur,intertrialtime
 PRINT #fid, "HEADER"
 PRINT #fid, "Name of the experiment"
-PRINT #fid, "Computer"
 PRINT #fid, "Experiment type: ", etype 'Type of experiment
 PRINT #fid, "Number of cycles: ", icycle 'number of iterations
 PRINT #fid, "Duration of each test cycle: ", cdur 'length of each
