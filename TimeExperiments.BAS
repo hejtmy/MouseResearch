@@ -58,7 +58,7 @@ END TYPE
 '----------------------------------------------------------------------------
 '       DECLARE VARIABLES
 '----------------------------------------------------------------------------
-
+DIM expname AS STRING
 DIM timesincestart AS SINGLE
 DIM lever AS TLever
 DIM feeder AS TFeeder
@@ -66,16 +66,17 @@ DIM experiment AS TExperiment
 DIM currentcycle AS TCycle
 DIM writeinterval AS SINGLE 'how often do we want to log stuff
 DIM numcycles AS INTEGER 'number of cycles in the experimental session
-DIM fstr$ 'output file format string
-DIM etype AS STRING
-DIM cdur AS SINGLE
-DIM rtype AS STRING
-DIM rdur AS SINGLE
-DIM rnum AS INTEGER
-DIM intertrialtime AS SINGLE
-DIM phase AS STRING
+DIM fstr$ 				'output file format string
+DIM etype AS STRING		'type of the experiment - basic/drl
+DIM cdur AS SINGLE 		'duration of the experimental cycle
+DIM rtype AS STRING		'type of the reward nth/first/each
+DIM rdur AS SINGLE		'duration of the reward cycle
+DIM rnum AS INTEGER		'number in case of nth reward 
+DIM intertrialtime AS SINGLE	'time between trials after reward ended
+DIM phase AS STRING		
 DIM icycle AS INTEGER
-
+DIM runquestions AS STRING
+DIM computer AS STRING
 '----------------------------------------------------------------------------
 '       Open output file
 '----------------------------------------------------------------------------
@@ -111,121 +112,39 @@ PRINT ""
 '-----------------------------------
 '       BASIC INICIALIZATIONS
 '-----------------------------------
-selectcomputer:
-INPUT ; "Which computer are you runing the experiment on? (right, left, test): ", computer$
-SELECT CASE computer$
-    CASE "right"
-        lever.address = &H300
-        lever.bit = 1
-        feeder.address = &H302
-        feeder.bit = 1
-    CASE "left"
-        lever.address = &H379
-        lever.bit = 5
-        feeder.address = &H378
-        feeder.bit = 2
-    CASE "test"
-        lever.address = -1
-        lever.bit = 0
-        feeder.address = -1
-        feeder.bit = 0
-    CASE ELSE
-        PRINT ("You havent selected any valid choice")
-        GOTO selectcomputer
+
+expname = "Time training"
+
+
+numcycles = 10			'number of cycles in the experimental session
+etype ="BASIC"			'type of the experiment - basic/drl
+xdur=10					'duration of the experimental cycle
+rtype="FIRST"			'type of the reward nth/first/each
+rdur=5					'duration of the reward cycle
+rnum=0					'number in case of nth reward 
+intertrialtime=1		'time between trials after reward ended
+
+writeinterval = 0.01	'how often do we want to log stuff
+fstr$ = "########"		'writing format
+
+computer = "right"
+SELECT CASE computer
+	CASE "right"
+		lever.address = &H300
+		lever.bit = 1
+		feeder.address = &H302
+		feeder.bit = 1
+	CASE "left"
+		lever.address = &H379
+		lever.bit = 5
+		feeder.address = &H378
+		feeder.bit = 2
+	CASE ELSE
+		lever.address = -1
+		lever.bit = 0
+		feeder.address = -1
+		feeder.bit = 0
 END SELECT
-'PUTS the option to skip all this to either load variables from a different source or to let the defaults take over
-PRINT ""
-'get the experiment type
-getexperimenttype:
-INPUT ; "Please enter experiment type (basic, drl): ", inpetype$
-SELECT CASE inpetype$
-    CASE "drl"
-        etype = "DRL"
-    CASE "basic"
-        etype = "BASIC"
-    CASE ELSE
-        PRINT ("You haven't selected any valid choice")
-        GOTO getexperimenttype
-END SELECT
-PRINT ""
-
-getexperimentcycles:
-INPUT "How many cycles should there be in an experiment?: ", inpnumcycles% 'THIS IS NOT VALIDATED! TODO
-IF inpnumcycles% > 0 THEN
-    numcycles = inpnumcycles%
-ELSE
-    PRINT ("You haven't selected any valid choice")
-    GOTO getexperimentcycles
-END IF
-
-getexperimentduration:
-INPUT "How long should the experiment cycle cycle last in seconds?: ", inpcdur! 'THIS IS NOT VALIDATED! TODO
-IF inpcdur! > 0 THEN
-    cdur = inpcdur!
-ELSE
-    PRINT ("You haven't selected any valid choice")
-    GOTO getexperimentduration
-END IF
-
-'INPUT the reward type
-getrewardtype:
-INPUT ; "Please enter reward type (each, nth, first): ", inprtype$
-SELECT CASE inprtype$
-    CASE "first"
-        rtype = "FIRST"
-    CASE "each"
-        rtype = "EACH"
-    CASE "nth"
-        rtype = "NTH"
-    CASE ELSE
-        PRINT ("You haven't selected any valid choice")
-        GOTO getrewardtype
-END SELECT
-PRINT ""
-
-'get the reward number (seconds for
-IF rtype = "NTH" THEN
-    PRINT ""
-    getrewardnumber:
-    INPUT "You selected each nth lever press would bring reward. Please enter how often should that be (2,3,5 etc.): ", inprnum% 'THIS IS NOT VALIDATED! TODO
-    IF inprnum% > 0 THEN
-        rnum = inprnum%
-    ELSE
-        PRINT ("You haven't selected any valid choice")
-        GOTO getrewardnumber
-    END IF
-END IF
-
-getrewardduration:
-INPUT "How long should the reward cycle last?: ", inprdur! 'THIS IS NOT VALIDATED! TODO
-IF inprdur! > 0 THEN
-    rdur = inprdur!
-ELSE
-    PRINT ("You haven't selected any valid choice")
-    GOTO getrewardduration
-END IF
-
-getintertrialtime:
-INPUT "How long should the intertrial time be?: ", inpinter! 'THIS IS NOT VALIDATED! TODO
-IF inpinter! > 0 THEN
-    intertrialtime = inpinter!
-ELSE
-    PRINT ("You haven't selected any valid choice")
-    GOTO getintertrialtime
-END IF
-'----------------------------------------------------------------------------
-'       INICIALIZATIONS
-'----------------------------------------------------------------------------
-
-'intertrialtime = 1
-writeinterval = 0.01
-fstr$ = "########"
-'----------------------------------------------------------------------------
-'       PORT ACTIVATION
-'----------------------------------------------------------------------------
-
-IF feeder.address = &H302 THEN OUT &H303, &H92
-feeder.status = 0
 
 '----------------------------------------------------------------------------
 '       LEVER FEEDER INICIALIZATIONS
@@ -233,6 +152,129 @@ feeder.status = 0
 lever.sensitivity = .01
 feeder.delay = .01
 feeder.duration = 1
+
+runquestions = "NO"	'whether we shoudl run the initialisation script
+'-----------------------------------
+'		SETUP IF NOT DEFINED
+'-----------------------------------
+IF runquestion = "YES" THEN
+	selectcomputer:
+	INPUT ; "Which computer are you runing the experiment on? (right, left, test): ", computer$
+	SELECT CASE computer$
+		CASE "right"
+			lever.address = &H300
+			lever.bit = 1
+			feeder.address = &H302
+			feeder.bit = 1
+		CASE "left"
+			lever.address = &H379
+			lever.bit = 5
+			feeder.address = &H378
+			feeder.bit = 2
+		CASE "test"
+			lever.address = -1
+			lever.bit = 0
+			feeder.address = -1
+			feeder.bit = 0
+		CASE ELSE
+			PRINT ("You havent selected any valid choice")
+			GOTO selectcomputer
+	END SELECT
+	'PUTS the option to skip all this to either load variables from a different source or to let the defaults take over
+	PRINT ""
+	'get the experiment type
+	getexperimenttype:
+	INPUT ; "Please enter experiment type (basic, drl): ", inpetype$
+	SELECT CASE inpetype$
+		CASE "drl"
+			etype = "DRL"
+		CASE "basic"
+			etype = "BASIC"
+		CASE ELSE
+			PRINT ("You haven't selected any valid choice")
+			GOTO getexperimenttype
+	END SELECT
+	PRINT ""
+
+	getexperimentcycles:
+	INPUT "How many cycles should there be in an experiment?: ", inpnumcycles% 'THIS IS NOT VALIDATED! TODO
+	IF inpnumcycles% > 0 THEN
+		numcycles = inpnumcycles%
+	ELSE
+		PRINT ("You haven't selected any valid choice")
+		GOTO getexperimentcycles
+	END IF
+
+	getexperimentduration:
+	INPUT "How long should the experiment cycle cycle last in seconds?: ", inpcdur! 'THIS IS NOT VALIDATED! TODO
+	IF inpcdur! > 0 THEN
+		cdur = inpcdur!
+	ELSE
+		PRINT ("You haven't selected any valid choice")
+		GOTO getexperimentduration
+	END IF
+
+	'INPUT the reward type
+	getrewardtype:
+	INPUT ; "Please enter reward type (each, nth, first): ", inprtype$
+	SELECT CASE inprtype$
+		CASE "first"
+			rtype = "FIRST"
+		CASE "f"
+			rtype = "FIRST"
+		CASE "each"
+			rtype = "EACH"
+		CASE "e"
+			rtype = "EACH"
+		CASE "nth"
+			rtype = "NTH"
+		CASE "n"
+			rtype = "NTH"
+		CASE ELSE
+			PRINT ("You haven't selected any valid choice")
+			GOTO getrewardtype
+	END SELECT
+	PRINT ""
+
+	'get the reward number (seconds for
+	IF rtype = "NTH" THEN
+		PRINT ""
+		getrewardnumber:
+		INPUT "You selected each nth lever press would bring reward. Please enter how often should that be (2,3,5 etc.): ", inprnum% 'THIS IS NOT VALIDATED! TODO
+		IF inprnum% > 0 THEN
+			rnum = inprnum%
+		ELSE
+			PRINT ("You haven't selected any valid choice")
+			GOTO getrewardnumber
+		END IF
+	END IF
+
+	getrewardduration:
+	INPUT "How long should the reward cycle last?: ", inprdur! 'THIS IS NOT VALIDATED! TODO
+	IF inprdur! > 0 THEN
+		rdur = inprdur!
+	ELSE
+		PRINT ("You haven't selected any valid choice")
+		GOTO getrewardduration
+	END IF
+
+	getintertrialtime:
+	INPUT "How long should the intertrial time be?: ", inpinter! 'THIS IS NOT VALIDATED! TODO
+	IF inpinter! > 0 THEN
+		intertrialtime = inpinter!
+	ELSE
+		PRINT ("You havent selected any valid choice")
+		GOTO getintertrialtime
+	END IF
+END IF
+
+'----------------------------------------------------------------------------
+'       PORT ACTIVATION
+'----------------------------------------------------------------------------
+
+IF feeder.address = &H302 THEN OUT &H303, &H92
+feeder.status = 0
+
 '----------------------------------------------------------------------------
 '       Main loop
 '----------------------------------------------------------------------------
@@ -491,6 +533,7 @@ WHILE starttime! + intertrialtime >= GetTime
 WEND
 END SUB
 
+
 '----------------------------------------------------------------------------
 '       FUNCTIONS
 '----------------------------------------------------------------------------
@@ -520,14 +563,15 @@ END FUNCTION
 
 SUB WriteHeader
 SHARED fid
-SHARED etype, icycle, cdur,rtype,rdur,intertrialtime
+SHARED etype, icycle, cdur,rtype,rdur,intertrialtime, rnum, expname
 PRINT #fid, "HEADER"
-PRINT #fid, "Name of the experiment"
+PRINT #fid, "Name of the experiment: " expname
 PRINT #fid, "Experiment type: ", etype 'Type of experiment
 PRINT #fid, "Number of cycles: ", icycle 'number of iterations
 PRINT #fid, "Duration of each test cycle: ", cdur 'length of each
 PRINT #fid, "Reward type: ", rtype
 PRINT #fid, "Duration of reward cycle: ", rdur
+PRINT #fid, "Reward number: ", rnum
 PRINT #fid, "Inter trial time: ", intertrialtime
 PRINT #fid, "*********"
 END SUB
