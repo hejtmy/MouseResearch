@@ -1,7 +1,7 @@
 #Loads the scripts in the preprocessing file
 #Most importantly - ReadMouseLog
 source("PreprocessingFunctions.R")
-path ="C:/Users/Lukáš/Vyzkum/BASIC/MouseResearch/Vystupy/UJK2"
+path ="U:/Vyzkum/AV/FGU/Mouse/BASIC/MouseResearch/Vystupy/TEST_drl_nth"
 #mouse log takes only path value as a parameter and reads the file into a list
 ls = ReadMouseLog(path)
 #the list has three sections - you don't need to resave them, its just for demonstration purposes here
