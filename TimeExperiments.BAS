@@ -76,6 +76,7 @@ DIM intertrialtime AS SINGLE 'time between trials after reward ended
 DIM phase AS STRING
 DIM icycle AS INTEGER
 DIM computer AS STRING
+DIM trailingLeverAllowed AS INTEGER
 '----------------------------------------------------------------------------
 '       Open output file
 '----------------------------------------------------------------------------
@@ -122,6 +123,7 @@ rtype = "FIRST" 'type of the reward nth/first/each
 rdur = 5 'duration of the reward cycle
 rnum = 0 'number in case of nth reward
 intertrialtime = 1 'time between trials after reward ended
+trailingLeverAllowed = 1 'Allows mice to hold press before Reward phase comes and then be immediatelly rewarded when reward phase starts
 
 writeinterval = 0.01 'how often do we want to log stuff
 fstr$ = "########" 'writing format
@@ -397,9 +399,13 @@ END SUB
 SUB RewardEachNthLever (nth%)
 SHARED rdur AS SINGLE
 SHARED timesincestart AS SINGLE
+SHARED trailingLeverAllowed AS INTEGER
 numberofpresses% = 0
 activated% = 0
-previouslever% = 0
+previouslever% = 1
+IF trailingLeverAllowed = 1 THEN
+	previouslever% = 0
+END IF
 loopstarttime! = GetTime
 WHILE loopstarttime! + rdur >= GetTime
     timesincestart = GetTime
@@ -426,17 +432,25 @@ END SUB
 SUB RewardFirst
 SHARED rdur AS SINGLE
 SHARED timesincestart AS SINGLE
+SHARED trailingLeverAllowed AS INTEGER
 loopstarttime! = GetTime
 feederactivated% = 0 'if the feeder has alrady been activated once
 rewarddone% = 0
+previouslever% = 1
+IF trailingLeverAllowed = 1 THEN
+	previouslever% = 0
+END IF
 WHILE loopstarttime! + rdur >= GetTime AND rewarddone% = 0 'the mouse has only specified time to press the lever
     timesincestart = GetTime
     leverstatus% = CheckLever
     feederstatus% = CheckFeeder
-    IF leverstatus% = 1 AND feederactivated% = 0 THEN
+    IF leverstatus% = 1 AND feederactivated% = 0 AND previouslever% = 0 THEN
         ActivateFeeder
         feederactivated% = 1
         WriteEvent ("RewardAdministered")
+    END IF
+	IF leverstatus% = 0 THEN 'if the lever was released we can start counting - only applicabe in no trailing lever allowed
+        previouslever% = 0
     END IF
     IF feederstatus% = 0 AND feederactivated% = 1 THEN rewarddone% = 1 'if the reward was given, we finish the subroutine
     TryWrite
