@@ -10,6 +10,7 @@ GetLeverPresses = function(betterEventTable, phaseName){
   return(df)
 }
 
+#Gets the time since start of lever preses in a table for given phase
 GetLeverPressTimes = function(betterEventTable, phaseName){
   phasesTable = filter(betterEventTable, type == phaseName)
   leverTable = filter(betterEventTable, type == "Lever")
