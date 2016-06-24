@@ -2,3 +2,6 @@
 *.Rdata
 *.Rhistory
 
+
+*.csv
+
