@@ -1,6 +1,7 @@
 #Loads the scripts in the preprocessing file
 #Most importantly - ReadMouseLog
 library(ggplot2)
+library(data.table)
 source("PreprocessingFunctions.R")
 source("TimeClass.R")
 source("AnalysisFunctions.R")
@@ -17,8 +18,5 @@ releaseTable = ls$releaseTable
 
 new = pressTable %>% filter(name == '10_C4TCO.G')
 new = leverTimesToReward %>% group_by(phaseOrder) %>% summarise(mean=mean(timeFromStart))
-
 ggplot(new, aes(phaseOrder, mean)) + geom_path()
 ggplot(leverPressNumber, aes(order, leverPresses)) + geom_count(stat = "identity")
-#if you want to get info from the header, you can do following
-timeAnalysis$header$"Reward type"
