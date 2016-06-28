@@ -4,20 +4,20 @@ library(ggplot2)
 source("PreprocessingFunctions.R")
 source("TimeClass.R")
 source("AnalysisFunctions.R")
-path ="U:/Vyzkum/AV/FGU/Mouse/BASIC/MouseResearch/Vystupy/TEST_drl_nth"
-path = "../VeronikaVystupy/10_C4TCO.G"
-#mouse log takes only path value as a parameter and reads the file into a list
-ls = ReadMouseLog(path)
-#the list has three sections - you don't need to resave them, its just for demonstration purposes here
+path = "../VeronikaVystupy/"
 
-timeAnalysis = TimeAnalysis$new(path)
+#check if there is a file with the data
+load("timeAnalyses.RData")
+#if not, read in the data
+betterEventTable = fread("analysesTable.csv", sep=";", header=T)
+# check if you can read the saved table
+ls = GetLeverPressTimes(betterEventTable)
+pressTable = ls$pressTable
+releaseTable = ls$releaseTable
 
-e = BetterEventTable(timeAnalysis$eventTable)
+new = pressTable %>% filter(name == '10_C4TCO.G')
+new = leverTimesToReward %>% group_by(phaseOrder) %>% summarise(mean=mean(timeFromStart))
 
-#
-leverPressNumber = GetLeverPresses(e, "Reward")
-leverTimesToReward = GetLeverPressTimes(e, "Test")
-new =leverTimesToReward %>% group_by(phaseOrder) %>% summarise(mean=mean(timeFromStart))
 ggplot(new, aes(phaseOrder, mean)) + geom_path()
 ggplot(leverPressNumber, aes(order, leverPresses)) + geom_count(stat = "identity")
 #if you want to get info from the header, you can do following
