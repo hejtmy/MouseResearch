@@ -7,6 +7,7 @@ CreateAnalysesList = function(path){
     timeAnalyses[[analysis$name]] = analysis
   }
   save(timeAnalyses, file = "timeAnalyses.RData")
+  return(analyses)
 }
 CreateAnalysesTable = function(analysisList){
   analysesTable = data.table()

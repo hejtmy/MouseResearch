@@ -11,6 +11,7 @@ TimeAnalysis = R6Class("TimeAnalysis",
      initialize = function(path){
        if(!missing(path)){
          self$name = gsub("(.*[/])","", path)
+         self$session = gsub("(.*[_])","", self$name)
          ls = ReadMouseLog(path)
          if(!is.null(ls)){
            self$logTable = ls[["table"]]
