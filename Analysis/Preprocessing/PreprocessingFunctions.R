@@ -1,6 +1,6 @@
 require(stringr)
 require(plyr)
-source("HelperFunctions.R")
+source("Helpers/HelperFunctions.R")
 
 ReadMouseLog = function(path){
   ls = list()

@@ -2,10 +2,7 @@
 #Most importantly - ReadMouseLog
 library(ggplot2)
 library(data.table)
-source("PreprocessingFunctions.R")
-source("TimeClass.R")
 source("AnalysisFunctions.R")
-path = "../VeronikaVystupy/"
 
 #check if there is a file with the data
 load("timeAnalyses.RData")
@@ -15,8 +12,10 @@ betterEventTable = fread("analysesTable.csv", sep=";", header=T)
 ls = GetLeverPressTimes(betterEventTable)
 pressTable = ls$pressTable
 releaseTable = ls$releaseTable
+ls = NULL
 
-new = pressTable %>% filter(name == '10_C4TCO.G')
-new = leverTimesToReward %>% group_by(phaseOrder) %>% summarise(mean=mean(timeFromStart))
-ggplot(new, aes(phaseOrder, mean)) + geom_path()
-ggplot(leverPressNumber, aes(order, leverPresses)) + geom_count(stat = "identity")
+singleTable = pressTable %>% filter(name == '10_C4TCO.G')
+new = singleTable %>% group_by(phaseIndex) %>% summarise(mean=mean(timeSincePhaseStart))
+ggplot(new, aes(phaseIndex, mean)) + geom_path()
+new = singleTable %>% group_by(phaseIndex) %>% summarise(max=max())
+ggplot(new, aes(order, leverPresses)) + geom_count(stat = "identity")
