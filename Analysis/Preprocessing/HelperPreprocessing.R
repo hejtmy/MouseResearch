@@ -1,3 +1,4 @@
+library(data.table)
 CreateAnalysesList = function(path){
   files = list.files(path, full.names = T, include.dirs = F)
   timeAnalyses = list()
@@ -18,6 +19,7 @@ CreateAnalysesTable = function(analysisList){
     analysesTable = rbind(analysesTable, analysis$betterEventTable)
   }
   write.table(analysesTable, "analysesTable.csv", sep=";", row.names = F, quote = F)
+  return(analysesTable)
 }
 #takes list of TimeAnalysis functions and saves table with header information for each patient
 CreatePatientHeaderData = function(analysisList){
