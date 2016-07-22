@@ -6,6 +6,7 @@ create_analyses_list = function(path){
     analysis = TimeAnalysis$new(file)
     timeAnalyses[[analysis$name]] = analysis
   }
+  if (!dir.exists('Computed')) dir.create('Computed')
   save(timeAnalyses, file = "Computed/timeAnalyses.RData")
   return(timeAnalyses)
 }
