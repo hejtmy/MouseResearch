@@ -1,4 +1,8 @@
 library(dplyr)
+source_folder = function(path){
+  sapply(list.files(pattern="[.]R$", path=path, full.names=TRUE), source);
+}
+
 FindStartEnd = function(eventTable, name, startEndNames = c()){
   starts = filter(eventTable, event == startEndNames[1])
   ends = filter(eventTable, event == startEndNames[2])

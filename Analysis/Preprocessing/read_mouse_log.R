@@ -35,7 +35,7 @@ ReadMouseLog = function(path){
   #   TABLE
   #combines all the lines that not to read
   non_table_indexes = c(headerIndexes,eventDividerIndexes,eventIndexes)
-
+  
   ls[["table"]]  <- read.table(textConnection(text[-non_table_indexes]),header=F,sep="")
   
   colnames(ls[["table"]])<-c("time","cycle","phase","leverStatus","feederStatus")
@@ -46,7 +46,7 @@ ReadMouseLog = function(path){
   return(ls)
 }
 
-read_header <- function(text =""){
+read_header <- function(text = ""){
   ls <- list()
   #for each line
   for (info in text) {
@@ -63,7 +63,7 @@ read_header <- function(text =""){
   return(ls)
 }
 
-read_events <-function(text=""){
+read_events <-function(text = ""){
   #preallocating the table
   frame <- data.frame(event = character(length(text)),time = numeric(length(text)),stringsAsFactors = F)
   i = 1
@@ -113,33 +113,8 @@ read_lever_feeder_events <- function (tab){
                   rep("feederStops",length(times_feeder_stops)))
   event_times = c(times_lever_pressed,times_lever_released,times_feeder_runs,times_feeder_stops)
   
-  frame <- data.frame(event = character(length(event_names)),time = numeric(length(event_names)),stringsAsFactors = F)
+  frame = data.frame(event = character(length(event_names)),time = numeric(length(event_names)),stringsAsFactors = F)
   frame$event = event_names
-  frame$time <-event_times
+  frame$time = event_times
   return(frame)
-}
-
-#creates better legible table from the comon event table in a form of 
-BetterEventTable = function(eventTable){
-  phasesTable = BetterPhasesTable(eventTable)
-  leverFeeder = BetterLeverFeederTable(eventTable)
-  #type order start end
-  df = rbind(phasesTable,leverFeeder)
-  return(df)
-}
-
-BetterPhasesTable = function(eventTable){
-  experimentTable = FindStartEnd(eventTable, "Experiment", c("ExperimentStarted","ExperimentEnded"))
-  testTable = FindStartEnd(eventTable, "Test", c("TestPhaseStarted","TestPhaseEnded"))
-  rewardTable = FindStartEnd(eventTable, "Reward", c("RewardPhaseStarted","RewardPhaseEnded"))
-  interTrialTable = FindStartEnd(eventTable, "InterTrial", c("InterTrialStarted","InterTrialEnded"))
-  df = rbind(experimentTable,testTable,rewardTable,interTrialTable)
-  return(df)
-}
-
-BetterLeverFeederTable = function(eventTable){
-  leverTable = FindStartEndLever(eventTable, "Lever", c("leverPressed","leverReleased"))
-  feederTable = FindStartEnd(eventTable, "Feeder", c("feederStarts","feederStops"))
-  df = rbind(leverTable,feederTable)
-  return(df)
 }

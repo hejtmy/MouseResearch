@@ -22,7 +22,7 @@ TimeAnalysis = R6Class("TimeAnalysis",
        }
      },
      MakeBetterEventTable = function(){
-       self$betterEventTable = BetterEventTable(self$eventTable)
+       self$betterEventTable = create_better_event_table(self$eventTable)
      },
      FillInData = function(){
         self$session = as.numeric(str_extract(self$name, "\\d+"))
