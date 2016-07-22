@@ -3,10 +3,9 @@
 library(ggplot2)
 source("Loading.R")
 
-#check if there is a file with the data
-load("timeAnalyses.RData")
-#if not, read in the data
-event_table = fread("analysesTable.csv", sep=";", header=T)
+#try to read in the data
+event_table = fread("Computed/dt_analyses.csv", sep=";", header=T)
+
 # check if you can read the saved table
 ls = lever_press_times(event_table)
 pressTable = ls$pressTable

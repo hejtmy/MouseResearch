@@ -9,7 +9,7 @@ create_better_dt_events = function(dt_events){
 
 create_phases_table = function(dt_events){
   df_experiment = FindStartEnd(dt_events, "Experiment", c("ExperimentStarted","ExperimentEnded"))
-  df_testTable = FindStartEnd(dt_events, "Test", c("TestPhaseStarted","TestPhaseEnded"))
+  df_test = FindStartEnd(dt_events, "Test", c("TestPhaseStarted","TestPhaseEnded"))
   df_reward = FindStartEnd(dt_events, "Reward", c("RewardPhaseStarted","RewardPhaseEnded"))
   df_inter_trial = FindStartEnd(dt_events, "InterTrial", c("InterTrialStarted","InterTrialEnded"))
   df = rbind(df_experiment, df_test, df_reward, df_inter_trial)

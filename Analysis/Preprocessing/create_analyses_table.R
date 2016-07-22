@@ -1,4 +1,3 @@
-library(data.table)
 create_analyses_table = function(analysisList){
   dt_analyses = data.table()
   for(analysis in analysisList){
