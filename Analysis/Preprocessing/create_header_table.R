@@ -14,6 +14,6 @@ create_header_table = function(ls_analysis){
     ls[[analysis$name]] = row
   }
   header_table = rbindlist(ls)
-  write.table(header_table, "header_table.csv", sep=";", row.names = F, quote = F)
+  write.table(header_table, "Computed/header_table.csv", sep=";", row.names = F, quote = F)
   return(header_table)
 }

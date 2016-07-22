@@ -1,8 +1,7 @@
 #Loads the scripts in the preprocessing file
 #Most importantly - ReadMouseLog
 library(ggplot2)
-library(data.table)
-source("AnalysisFunctions.R")
+source("Loading.R")
 
 #check if there is a file with the data
 load("timeAnalyses.RData")

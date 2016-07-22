@@ -6,6 +6,6 @@ create_analyses_list = function(path){
     analysis = TimeAnalysis$new(file)
     timeAnalyses[[analysis$name]] = analysis
   }
-  save(timeAnalyses, file = "timeAnalyses.RData")
+  save(timeAnalyses, file = "Computed/timeAnalyses.RData")
   return(timeAnalyses)
 }
