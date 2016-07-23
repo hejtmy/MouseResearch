@@ -1,7 +1,16 @@
+# =======
+# Data and preprocessed files
+# =======
+
+Data/*
+*.csv
+
+# =======
+# R files
+# =======
 *.Rproj*
 *.Rdata
 *.Rhistory
 
 
-*.csv
 
