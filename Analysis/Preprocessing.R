@@ -3,7 +3,7 @@
 
 source('Loading.R')
 
-path = "../Data - Copy/"
+path = "../Data/"
 
 analyses = create_analyses_list(path)
 analysesTable = create_analyses_table(analyses)

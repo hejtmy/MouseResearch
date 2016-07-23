@@ -1,7 +1,3 @@
-require(stringr)
-require(plyr)
-source("Helpers/HelperFunctions.R")
-
 ReadMouseLog = function(path){
   ls = list()
   #if the file does not exists returning NULL and exiting

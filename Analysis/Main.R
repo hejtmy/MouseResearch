@@ -1,6 +1,5 @@
 #Loads the scripts in the preprocessing file
 #Most importantly - ReadMouseLog
-library(ggplot2)
 source("Loading.R")
 
 #try to read in the data
@@ -13,8 +12,5 @@ releaseTable = ls$releaseTable
 ls = NULL
 
 singleTable = pressTable %>% filter(name == '10_C4TCO.G')
-new = singleTable %>% group_by(phaseIndex) %>% summarise(mean=mean(timeSincePhaseStart))
+new = singleTable %>% group_by(phaseIndex) %>% summarise(mean = mean(time_since_phase_start))
 ggplot(new, aes(phaseIndex, mean)) + geom_path()
-
-new = singleTable %>% group_by(phaseIndex)
-ggplot(new, aes(order, leverPresses)) + geom_count(stat = "identity")

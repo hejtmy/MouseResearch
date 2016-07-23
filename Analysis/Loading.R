@@ -1,4 +1,6 @@
 library(data.table)
+require(stringr)
+library(ggplot2)
 library(dplyr)
 
 source("Helpers/HelperFunctions.R")
