@@ -1,9 +1,5 @@
-require(stringr)
-require(plyr)
-
 ReadMouseLog = function(path){
   ls = list()
-
   #if the file does not exists returning NULL and exiting
   if(!file.exists(path)){
     print("Could not find the file for given log")
@@ -35,11 +31,10 @@ ReadMouseLog = function(path){
   #   TABLE
   #combines all the lines that not to read
   non_table_indexes = c(headerIndexes,eventDividerIndexes,eventIndexes)
-
   
   ls[["table"]]  <- read.table(textConnection(text[-non_table_indexes]),header=F,sep="")
   
-  colnames(ls[["table"]])<-c("time","cycle","phase","lever_status","feeder_status")
+  colnames(ls[["table"]])<-c("time","cycle","phase","leverStatus","feederStatus")
   lever_feeder_events <- read_lever_feeder_events(ls[["table"]])
   
   ls[["events"]] <- rbind(basic_events,lever_feeder_events)
@@ -47,7 +42,7 @@ ReadMouseLog = function(path){
   return(ls)
 }
 
-read_header <- function(text =""){
+read_header <- function(text = ""){
   ls <- list()
   #for each line
   for (info in text) {
@@ -64,7 +59,7 @@ read_header <- function(text =""){
   return(ls)
 }
 
-read_events <-function(text=""){
+read_events <-function(text = ""){
   #preallocating the table
   frame <- data.frame(event = character(length(text)),time = numeric(length(text)),stringsAsFactors = F)
   i = 1
@@ -90,32 +85,32 @@ read_lever_feeder_events <- function (tab){
   same_lever_counter = 1;
   same_feeder_counter = 1;
   for (i in 2:length(tab$time)){
-    if (tab$feeder_status[i]==tab$feeder_status[i-1]){
+    if (tab$feederStatus[i]==tab$feederStatus[i-1]){
       same_feeder_counter=same_feeder_counter+1;
     } else {
       same_feeder_counter = 0;
     }
-    if (tab$lever_status[i]==tab$lever_status[i-1]){
+    if (tab$leverStatus[i]==tab$leverStatus[i-1]){
       same_lever_counter=same_lever_counter+1;
     } else {
       same_lever_counter = 0;
     }
-    same_feeder_count[i]=same_feeder_counter;
-    same_lever_count[i]=same_lever_counter;
+    same_feeder_count[i] = same_feeder_counter;
+    same_lever_count[i] = same_lever_counter;
   }
-  times_lever_pressed = tab$time[(same_lever_count==0 & tab$lever_status ==1)]
-  times_lever_released = tab$time[(same_lever_count==0 & tab$lever_status ==0)]
-  times_feeder_runs = tab$time[(same_feeder_count==0 & tab$feeder_status ==1)]
-  times_feeder_stops = tab$time[(same_feeder_count==0 & tab$feeder_status ==0)]
+  times_lever_pressed = tab$time[(same_lever_count==0 & tab$leverStatus ==1)]
+  times_lever_released = tab$time[(same_lever_count==0 & tab$leverStatus ==0)]
+  times_feeder_runs = tab$time[(same_feeder_count==0 & tab$feederStatus ==1)]
+  times_feeder_stops = tab$time[(same_feeder_count==0 & tab$feederStatus ==0)]
   
-  event_names = c(rep("lever_pressed",length(times_lever_pressed)),
-                  rep("lever_released",length(times_lever_released)),
-                  rep("feeder_starts",length(times_feeder_runs)),
-                  rep("feeder_stops",length(times_feeder_stops)))
+  event_names = c(rep("leverPressed",length(times_lever_pressed)),
+                  rep("leverReleased",length(times_lever_released)),
+                  rep("feederStarts",length(times_feeder_runs)),
+                  rep("feederStops",length(times_feeder_stops)))
   event_times = c(times_lever_pressed,times_lever_released,times_feeder_runs,times_feeder_stops)
   
-  frame <- data.frame(event = character(length(event_names)),time = numeric(length(event_names)),stringsAsFactors = F)
+  frame = data.frame(event = character(length(event_names)),time = numeric(length(event_names)),stringsAsFactors = F)
   frame$event = event_names
-  frame$time <-event_times
+  frame$time = event_times
   return(frame)
 }

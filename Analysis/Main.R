@@ -1,17 +1,16 @@
 #Loads the scripts in the preprocessing file
 #Most importantly - ReadMouseLog
-source("PreprocessingFunctions.R")
-path ="U:/Vyzkum/AV/FGU/Mouse/BASIC/MouseResearch/Vystupy/TEST_drl_nth"
-#mouse log takes only path value as a parameter and reads the file into a list
-ls = ReadMouseLog(path)
-#the list has three sections - you don't need to resave them, its just for demonstration purposes here
-table = ls[["table"]]
-events = ls[["events"]]
-header = ls[["header"]]
+source("Loading.R")
 
-View(table)
-View(events)
-View(header)
+#try to read in the data
+event_table = fread("Computed/dt_analyses.csv", sep=";", header=T)
 
-#if you want to get info from the header, you can do following
-ls[["header"]]$"Reward type"
+# check if you can read the saved table
+ls = lever_press_times(event_table)
+pressTable = ls$pressTable
+releaseTable = ls$releaseTable
+ls = NULL
+
+singleTable = pressTable %>% filter(name == '10_C4TCO.G')
+new = singleTable %>% group_by(phaseIndex) %>% summarise(mean = mean(time_since_phase_start))
+ggplot(new, aes(phaseIndex, mean)) + geom_path()
