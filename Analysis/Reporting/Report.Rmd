@@ -1,0 +1,35 @@
+---
+title: "MouseTimePerception"
+author: "Lukáš Hejtmánek"
+date: "29 June 2016"
+output: html_document
+---
+Data have been preprocessed by reading in all the BAS files and then extracting lever press lever release times. The only possible error in this could be in the extraction adn detection of unclear or unstable lever presses.
+
+```{r, echo = FALSE, warning = FALSE}
+setwd("D:/FGU/MouseResearch/Analysis/")
+source("Loading.R")
+event_table = fread("Computed/dt_analyses.csv", sep=";", header=T)
+
+# check if you can read the saved table
+ls = lever_press_times(event_table)
+dt_presses = ls$pressTable
+dt_releases = ls$releaseTable
+ls = NULL
+
+dt_header = fread("Computed/header_table.csv", sep=";", header=T)
+dt_presses = merge(dt_presses, dt_header, by = "name")
+dt_releases = merge(dt_releases, dt_header, by = "name")
+```
+
+So, let's have a look at it
+
+```{r, echo = T}
+ggplot(dt_presses[,mean(time_since_cycle_start),by = session], aes(x = session, y = V1)) + geom_line()
+dt_presses[,mean(time_since_phase_start),by=type_phase]
+dt_presses[,mean(time_since_phase_start),by=.(type_phase, testCycleDuration)]
+ggplot(dt_presses[type_phase=="Test" & testCycleDuration == 15, mean(time_since_phase_start),by=.(session, testCycleDuration)]) + geom_line(aes(session, V1))
+ggplot(dt_presses[type_phase=="Test" & testCycleDuration == 30, mean(time_since_phase_start),by=.(session, testCycleDuration)]) + geom_line(aes(session, V1))
+ggplot(dt_presses[type_phase=="Reward" & testCycleDuration == 15, mean(time_since_phase_start),by=.(session, testCycleDuration)]) + geom_line(aes(session, V1))
+ggplot(dt_presses[type_phase=="Reward" & testCycleDuration == 30, mean(time_since_phase_start),by=.(session, testCycleDuration)]) + geom_line(aes(session, V1))
+```
