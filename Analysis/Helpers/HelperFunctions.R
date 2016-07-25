@@ -8,7 +8,7 @@ FindStartEnd = function(eventTable, name, startEndNames = c()){
   if (nrow(starts) != nrow(ends)){
     return(NULL)
   }
-  df = data.frame(type = rep(name, nrow(starts)), startTime = as.numeric(starts$time), endTime = as.numeric(ends$time))
+  df = data.frame(type = rep(name, nrow(starts)), start = as.numeric(starts$time), end = as.numeric(ends$time))
   return(df)
 }
 
@@ -30,6 +30,6 @@ FindStartEndLever = function(eventTable, name, startEndNames = c()){
       newEnds = c(newEnds, endTime)
     }
   }
-  df = data.frame(type = rep(name, length(newStarts)), startTime = as.numeric(newStarts), endTime = as.numeric(newEnds))
+  df = data.frame(type = rep(name, length(newStarts)), start = as.numeric(newStarts), end = as.numeric(newEnds))
   return(df)
 }
