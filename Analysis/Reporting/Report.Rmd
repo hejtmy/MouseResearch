@@ -9,6 +9,9 @@ Data have been preprocessed by reading in all the BAS files and then extracting 
 ```{r, echo = FALSE, warning = FALSE}
 setwd("D:/FGU/MouseResearch/Analysis/")
 source("Loading.R")
+source_folder("Reporting/Graphing")
+
+
 event_table = fread("Computed/dt_analyses.csv", sep=";", header=T)
 
 # check if you can read the saved table
