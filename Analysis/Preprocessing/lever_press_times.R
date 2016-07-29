@@ -1,20 +1,30 @@
 #Gets the time since start of lever preses in a table for given phase
+
 lever_press_times = function(event_table){
   experimentPhases = c("Test", "Reward", "InterTrial")
   phasesTimes = data.table(event_table[type %in% experimentPhases,])
-  phasesTimes[, phaseIndex := c(1:.N), by= list(type, name)]
-  phasesTimes[, cycleStart := .SD$startTime[type=="Test"], by=.(name, phaseIndex)]
+  #possibly to order by type and then time
+  setorder(phasesTimes, name, type, start)
+  #this works safely because the table is ordered
+  phasesTimes[, cycle_index := c(1:.N), by = .(type, name)]
+  phasesTimes[, cycle_start := .SD[type == "Test"]$start, by = .(name, cycle_index)]
   
   leverTimes = data.table(event_table[type == "Lever",])
   #merges all possibl elevers with all phases for each participatn and then selects only mathing
-  newTable = merge(leverTimes, phasesTimes, by="name", allow.cartesian = T)
+  newTable = merge(leverTimes, phasesTimes, by = "name", allow.cartesian = T, suffixes = c("_event", "_phase"))
   ls = list()
-  ls$pressTable = unique(newTable[startTime.x > startTime.y & startTime.x < endTime.y], by = NULL)
-  ls$pressTable[, time_since_phase_start := startTime.x - startTime.y[1], by=list(name, type.y, phaseIndex)]
-  ls$pressTable[, time_since_cycle_start := startTime.x - cycleStart]
-  ls$pressTable[, lever_phase_id := c(1:.N), by=list(name, type.y, phaseIndex)]
+  ls$pressTable = unique(newTable[start_event > start_phase & start_event < end_phase], by = NULL)
+  ls$pressTable = add_columns(ls$pressTable)
   
-  ls$releaseTable = unique(newTable[endTime.x > startTime.y & endTime.x < endTime.y], by = NULL)
-  
+  ls$releaseTable = unique(newTable[end_event > start_phase & end_event < end_phase], by = NULL)
+  ls$releaseTable = add_columns(ls$releaseTable)
   return(ls)
+}
+
+add_columns = function(dt){
+  dt[, time_since_phase_start := start_event - start_phase[1], by = list(name, type_phase, cycle_index)]
+  dt[, time_since_cycle_start := start_event - cycle_start]
+  dt[, lever_cycle_id := c(1:.N), by=list(name, cycle_index)]
+  dt[, lever_phase_id := c(1:.N), by=list(name, type_phase, cycle_index)]
+  return(dt)
 }

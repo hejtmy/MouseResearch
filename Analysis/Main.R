@@ -11,6 +11,12 @@ pressTable = ls$pressTable
 releaseTable = ls$releaseTable
 ls = NULL
 
+mistrials = read.table("../Data/Mistrials.csv", sep = ",", header = T, stringsAsFactors = F)
+#excluding mistrials
+pressTable = pressTable[!(name %in% mistrials$name)]
+releaseTable = releaseTable[!(name %in% mistrials$name)]
+
+
 singleTable = pressTable %>% filter(name == '10_C4TCO.G')
 new = singleTable %>% group_by(phaseIndex) %>% summarise(mean = mean(time_since_phase_start))
 ggplot(new, aes(phaseIndex, mean)) + geom_path()
