@@ -4,10 +4,10 @@ lever_press_times = function(event_table){
   experimentPhases = c("Test", "Reward", "InterTrial")
   phasesTimes = data.table(event_table[type %in% experimentPhases,])
   #possibly to order by type and then time
-  setorder(phasesTimes, type, start)
+  setorder(phasesTimes, name, type, start)
   #this works safely because the table is ordered
-  phasesTimes[, cycle_index := c(1:.N), by= list(type, name)]
-  phasesTimes[, cycle_start := .SD$start[type=="Test"], by=.(name, cycle_index)]
+  phasesTimes[, cycle_index := c(1:.N), by = .(type, name)]
+  phasesTimes[, cycle_start := .SD[type == "Test"]$start, by = .(name, cycle_index)]
   
   leverTimes = data.table(event_table[type == "Lever",])
   #merges all possibl elevers with all phases for each participatn and then selects only mathing

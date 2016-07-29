@@ -1,0 +1,62 @@
+---
+title: "Email response"
+author: "Lukáš Hejtmanek"
+date: "29. července 2016"
+output: html_document
+---
+
+1) boxplot time_since_phase_start podle type.y
+2) graf (x=time_since_cycle_start), body pro jednotlivý zmáčknutí
+3) histogram (x=time_since_cycle_start), breaks=po 1s (tzn. pro cycle duration 15=15, cycle duration 30=30) + spočítat zmáčknutí posledních 5 s test fáze a zmáčknutí reward fáze pro 15s cycle duration/ 10s test a 10s reward pro 30s cycle duration
+
+
+```{r, echo = F}
+setwd("D:/FGU/MouseResearch/Analysis/")
+source("Loading.R")
+
+source_folder("Reporting/Graphing")
+
+#try to read in the data
+event_table = fread("Computed/dt_analyses.csv", sep=";", header=T)
+
+# check if you can read the saved table
+ls = lever_press_times(event_table)
+dt_presses = ls$pressTable
+dt_releases = ls$releaseTable
+ls = NULL
+
+dt_header = fread("Computed/header_table.csv", sep=";", header=T)
+dt_presses = merge(dt_presses, dt_header, by = "name")
+dt_releases = merge(dt_releases, dt_header, by = "name")
+
+mistrials = read.table("../Data/Mistrials.csv", sep = ",", header = T, stringsAsFactors = F)
+#excluding mistrials
+dt_presses = dt_presses[!(name %in% mistrials$name)]
+dt_releases = dt_releases[!(name %in% mistrials$name)]
+```
+
+## 1) boxplot time_since_phase_start podle type.y
+
+pro Press Table
+```{r}
+boxplot_phase_since_start(dt_presses)
+```
+
+pro potkana zvlášť
+```{r}
+boxplot_phase_since_start(v, "1_C2TCOG")
+```
+
+## 2) graf (x = time_since_cycle_start), body pro jednotlivý zmáčknutí
+
+```{r}
+ggplot(dt_presses[testCycleDuration == 15], aes(time_since_cycle_start)) + geom_histogram(binwidth = 0.5) + geom_vline(xintercept = 15) + geom_vline(xintercept = 20, color)
+```
+
+## 3) histogram (x=time_since_cycle_start), 
+
+breaks=po 1s (tzn. pro cycle duration 15=15, cycle duration 30=30) + spočítat zmáčknutí posledních 5 s test fáze a zmáčknutí reward fáze pro 15s cycle duration/ 10s test a 10s reward pro 30s cycle duration
+
+```{r}
+ggplot(dt_presses[testCycleDuration == 15 & time_since_cycle_start > 10 & time_since_cycle_start < 15], aes(time_since_cycle_start)) + geom_histogram(binwidth = 0.5)
+```
